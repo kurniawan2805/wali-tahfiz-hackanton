@@ -42,6 +42,8 @@ OPENAI_API_KEY=your_openai_api_key_here
 
 Jangan pernah memasukkan kunci API ke kode frontend atau melakukan commit pada berkas `.env*`.
 
+Saat menjalankan `npm run dev`, route lokal `/api/daily-coach` dijalankan oleh middleware Vite. Dengan begitu Teman Hafalan dapat memakai `OPENAI_API_KEY` dari `.env.local` tanpa mengeksposnya ke browser. Pada deployment, route yang sama tetap dilayani oleh fungsi server `api/daily-coach.js`.
+
 ## Teknologi
 
 - React + Vite

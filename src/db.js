@@ -71,6 +71,17 @@ db.version(2).stores({
   await memories.toCollection().modify((memory) => { if (!memory.childId) memory.childId = childId })
 })
 
+// Daily coaching context is intentionally local to this device and scoped to one child.
+// It contains only learning-state signals, never free-form conversation history.
+db.version(3).stores({
+  profiles: '&id, updatedAt',
+  targets: '&id, childId, createdAt, status, type',
+  memories: '&id, childId, surahId, nextReviewAt',
+  preferences: '&key',
+  meta: '&key',
+  coachCheckins: '&id, childId, date, [childId+date], updatedAt',
+})
+
 const legacyKeys = { profile: 'wali-tahfiz-profile', targets: 'wali-tahfiz-targets', memories: 'wali-tahfiz-memories', quranRepeat: 'wali-tahfiz-quran-repeat' }
 const readLegacyJson = (key, fallback) => { try { return JSON.parse(localStorage.getItem(key)) ?? fallback } catch { return fallback } }
 

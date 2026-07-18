@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Fredoka:wght@500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Amiri+Quran&family=DM+Sans:wght@400;500;600;700&family=Fredoka:wght@500;600;700&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -9,12 +9,28 @@
   html { -webkit-font-smoothing: antialiased; }
   body { @apply min-h-screen bg-cream font-sans text-slate-700; text-wrap: pretty; background-image: radial-gradient(circle at 8% 0%, rgba(220,235,220,.65), transparent 30%), radial-gradient(circle at 95% 20%, rgba(255,229,196,.4), transparent 25%); }
   h1, h2, h3 { text-wrap: balance; }
-  button, select { @apply focus:outline-none focus-visible:ring-4 focus-visible:ring-forest/20; }
+  button, select, input { @apply focus:outline-none focus-visible:ring-4 focus-visible:ring-forest/20; }
+  [dir='rtl'] { font-family: 'Amiri Quran', 'Amiri', serif; font-weight: 400; }
 }
 
 @layer components {
   .font-display { font-family: 'Fredoka', sans-serif; }
+  .app-page { @apply min-h-screen bg-cream pb-12; }
+  .page-shell { @apply mx-auto px-4 pt-6 sm:px-6 sm:pt-9; }
+  .page-shell-narrow { @apply max-w-md; }
+  .page-shell-form { @apply max-w-lg; }
+  .page-shell-settings { @apply max-w-3xl; }
+  .page-shell-reading { @apply max-w-3xl; }
+  .page-header { @apply mb-6 flex min-h-12 items-center justify-between gap-3; }
+  .page-header > div:first-child { @apply flex-1; }
+  .brand-mark { @apply flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-forest text-white shadow-[0_8px_20px_rgba(71,119,92,.20)]; }
+  .page-back-button { @apply flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-white text-forest shadow-[0_8px_20px_rgba(71,119,92,.09)] transition-transform duration-200 active:scale-[0.96]; }
+  .page-eyebrow { @apply text-[11px] font-bold uppercase tracking-[.14em] text-forest/70; }
+  .page-title { @apply font-display text-3xl leading-tight text-forest; }
+  .page-action-button { @apply flex min-h-11 items-center gap-2 rounded-2xl bg-forest px-3.5 text-sm font-bold text-white shadow-sm shadow-forest/20 transition-[transform,background-color] duration-200 hover:bg-[#39684d] active:scale-[0.96]; }
   .glass-card { @apply rounded-[32px] border border-white/90 bg-white/95 shadow-soft; box-shadow: 0 18px 55px rgba(71,119,92,.10), 0 2px 5px rgba(71,119,92,.04); }
+  .page-card { @apply rounded-[30px]; }
+  .page-card-hero { @apply bg-forest px-6 py-5 text-white; }
   .step-label { @apply inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[11px] font-bold tracking-[0.14em]; }
   .phase-panel { animation: phase-in 320ms cubic-bezier(0.2, 0, 0, 1); }
   .input-field { @apply w-full rounded-2xl border border-sage bg-[#fbfdf8] px-4 py-3.5 text-base font-semibold text-slate-700 placeholder:font-normal placeholder:text-slate-400; }
@@ -22,22 +38,24 @@
   .secondary-button { @apply flex min-h-12 flex-1 items-center justify-center gap-2 rounded-2xl border border-sage bg-white px-4 py-3 font-bold text-forest transition-[transform,background-color] duration-200 hover:bg-[#f7faf4] active:scale-[0.96]; }
   .icon-button { @apply flex h-11 w-11 items-center justify-center rounded-2xl bg-white text-forest shadow-sm transition-transform duration-200 active:scale-[0.96]; }
   .audio-control { @apply flex h-11 w-11 items-center justify-center rounded-2xl bg-[#f7faf4] text-forest transition-[transform,background-color] active:scale-[0.96]; }
-  .ayah-card { @apply rounded-[26px] bg-[#fffdf8] p-5 shadow-sm transition-[transform,background-color,box-shadow] duration-200 active:scale-[0.96]; }
-  .ayah-card-active { @apply bg-forest shadow-lg shadow-forest/20; }
+  .ayah-card { @apply relative overflow-hidden rounded-[26px] bg-[#fffdf8] p-5 shadow-sm transition-[transform,background-color,box-shadow] duration-200 active:scale-[0.96]; box-shadow: 0 10px 26px rgb(71 119 92 / 7%), 0 1px 2px rgb(71 119 92 / 5%); }
+  .ayah-card::before { content: ''; @apply absolute inset-y-5 left-0 w-1 rounded-r-full bg-transparent transition-[background-color] duration-200; }
+  .ayah-card-active { @apply bg-forest shadow-lg shadow-forest/20; box-shadow: 0 18px 34px rgb(71 119 92 / 24%), 0 2px 5px rgb(71 119 92 / 14%); }
+  .ayah-card-active::before { @apply bg-peach; }
   .ayah-card-active p[dir='rtl'] { color: #fff; text-shadow: 0 1px 1px rgb(0 0 0 / 12%); }
   .ayah-card-active .bg-white\/20 { outline: 1px solid rgb(255 255 255 / 18%); }
   .ayah-card-in-range { @apply outline outline-1 outline-sage; }
   .ayah-card:disabled { @apply cursor-not-allowed opacity-45; }
-  .range-settings-toggle { @apply flex min-h-12 w-full items-center justify-between gap-3 rounded-[22px] bg-[#eff6eb] px-4 py-3 text-left transition-[transform,background-color] active:scale-[0.96]; }
+  .range-settings-toggle { @apply flex min-h-12 w-full items-center justify-between gap-3 rounded-[22px] bg-[#eff6eb] px-4 py-3 text-left transition-[transform,background-color,box-shadow] duration-200 active:scale-[0.96]; box-shadow: inset 0 1px 0 rgb(255 255 255 / 70%), 0 5px 15px rgb(71 119 92 / 6%); }
   .range-settings-toggle > span { @apply flex items-center gap-2 text-forest; }
   .range-settings-toggle small { @apply text-right text-xs font-semibold text-slate-500; }
-  .range-settings-panel { @apply mt-3 rounded-[24px] bg-[#f7faf4] p-4; }
+  .range-settings-panel { @apply mt-3 rounded-[24px] bg-[#f7faf4] p-4; box-shadow: inset 0 1px 0 rgb(255 255 255 / 75%); }
   .range-choice { @apply flex min-h-11 min-w-11 items-center justify-center rounded-xl bg-white px-2 text-sm font-bold text-forest transition-[transform,background-color,color] active:scale-[0.96]; }
   .range-choice-active { @apply bg-forest text-white shadow-sm; }
   .range-switch { @apply min-h-11 rounded-xl bg-white px-3 text-sm font-bold text-slate-500 transition-[transform,background-color,color] active:scale-[0.96]; }
   .range-switch-active { @apply bg-forest text-white shadow-sm; }
   .range-input { @apply w-full rounded-xl border border-sage bg-white px-3 py-3 text-center font-bold tabular-nums text-forest; }
-  .bismillah-card { @apply w-full rounded-[26px] bg-[#fffaf2] p-5 text-center shadow-sm transition-[transform,background-color,box-shadow] active:scale-[0.96]; }
+  .bismillah-card { @apply w-full rounded-[26px] bg-[#fffaf2] p-5 text-center shadow-sm transition-[transform,background-color,box-shadow] duration-200 active:scale-[0.96]; box-shadow: 0 10px 26px rgb(158 108 73 / 8%), 0 1px 2px rgb(158 108 73 / 5%); }
   .bismillah-card small { @apply mt-1 block text-sm text-slate-500; }
   .bismillah-card-active { @apply bg-[#eff6eb] shadow-lg shadow-forest/15; }
   .role-card { @apply flex min-h-28 flex-col items-center justify-center gap-2 rounded-[22px] border-2 border-transparent bg-[#f7faf4] p-4 text-base font-bold text-slate-600 transition-[transform,background-color,border-color] duration-200 active:scale-[0.96]; }
@@ -60,21 +78,75 @@
   .coach-panel { @apply rounded-[28px] border border-white/90 bg-white/95 p-5 shadow-[0_20px_55px_rgba(71,119,92,.22),0_2px_6px_rgba(71,119,92,.08)] backdrop-blur; animation: coach-in 220ms cubic-bezier(.2,0,0,1); }
   .coach-fab { @apply flex min-h-12 items-center gap-2 rounded-full bg-forest px-4 py-3 text-sm font-bold text-white shadow-[0_14px_32px_rgba(71,119,92,.32)] transition-transform duration-200 active:scale-[0.96]; }
   .coach-pulse { @apply absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full bg-peach ring-2 ring-forest; animation: coach-pulse 1.8s ease-in-out infinite; }
+  .daily-checkin { @apply overflow-hidden rounded-[32px] bg-[#eff6eb] p-5 sm:p-6; box-shadow: inset 0 1px 0 rgb(255 255 255 / 78%), 0 18px 44px rgb(71 119 92 / 11%), 0 2px 5px rgb(71 119 92 / 5%); }
+  .daily-checkin-heading { @apply flex items-start gap-3; }
+  .daily-checkin-icon { @apply flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-peach text-terracotta shadow-sm; }
+  .daily-checkin-status { @apply hidden shrink-0 rounded-full bg-white px-3 py-1.5 text-xs font-bold text-forest sm:inline-flex; }
+  .daily-checkin-message { @apply mt-4 rounded-[22px] bg-white/85 p-4; box-shadow: inset 0 1px 0 rgb(255 255 255 / 90%), 0 4px 12px rgb(71 119 92 / 5%); }
+  .daily-checkin-action { @apply flex min-h-12 flex-1 items-center justify-center gap-2 rounded-2xl bg-forest px-4 text-sm font-bold text-white shadow-sm shadow-forest/20 transition-[transform,background-color] duration-200 hover:bg-[#39684d] active:scale-[0.96]; }
+  .daily-checkin-ai { @apply flex min-h-12 flex-1 items-center justify-center gap-2 rounded-2xl bg-white px-4 text-sm font-bold text-forest shadow-sm transition-[transform,background-color] duration-200 hover:bg-[#f7faf4] active:scale-[0.96]; }
   .practice-page { @apply min-h-screen bg-cream pb-12; }
   .practice-shell { @apply mx-auto flex min-h-[calc(100vh-3rem)] max-w-3xl flex-col px-4 pt-6 sm:px-6 lg:min-h-[calc(100vh-5rem)] lg:pt-10; }
+  .practice-shell > header { @apply mb-1 rounded-[22px] bg-white/70 px-3 py-1.5 shadow-[0_8px_22px_rgba(71,119,92,.06)]; }
   .practice-ayah-panel { @apply flex min-h-64 items-center justify-center rounded-[26px] bg-[#fffaf2] px-5 py-8 text-center shadow-inner lg:min-h-80 lg:px-8 lg:py-12; }
   .practice-ayah-panel-scroll { @apply block max-h-[48vh] min-h-0 overflow-y-auto text-right; }
+  .practice-phase-navigation { @apply mx-auto mt-8 flex max-w-2xl gap-3; }
+  .practice-phase-navigation > button { @apply !w-auto flex-1; }
+  .tikrar-fruit-counter { @apply mt-6 overflow-hidden rounded-[26px] bg-[#eff6eb] px-5 pb-5 pt-4 text-center; box-shadow: inset 0 1px 0 rgb(255 255 255 / 75%); }
+  .tikrar-tree { @apply relative mx-auto flex min-h-44 max-w-xs items-start justify-center pt-3; }
+  .tikrar-tree-trunk { @apply absolute bottom-0 text-[104px] leading-none; }
+  .tikrar-tree-fruits { @apply relative z-10 grid w-44 grid-cols-5 place-items-center gap-y-1 px-3 pt-2; }
+  .tikrar-tree-fruit { @apply text-2xl transition-[transform,opacity] duration-500 ease-out; }
+  .tikrar-tree-fruit-picked { @apply pointer-events-none opacity-0; transform: translateY(86px) scale(.55) rotate(18deg); }
+  .tikrar-basket { @apply relative mx-auto -mt-5 flex h-16 max-w-40 items-end justify-center; }
+  .tikrar-basket-icon { @apply relative z-10 text-6xl leading-none; }
+  .tikrar-basket-fruits { @apply absolute bottom-8 left-1/2 z-20 flex w-28 -translate-x-1/2 flex-wrap justify-center leading-none; }
+  .tikrar-basket-fruit { @apply -mx-0.5 text-xl; animation: fruit-in-basket 380ms cubic-bezier(.2,0,0,1) both; }
+  .tikrar-fruit-controls { @apply mt-5 flex justify-center gap-3; }
+  .tikrar-fruit-control { @apply flex h-12 w-12 items-center justify-center rounded-2xl border border-sage bg-white text-2xl font-semibold leading-none text-forest shadow-sm transition-[transform,background-color,color] duration-200 hover:bg-[#f7faf4] active:scale-[0.96]; }
+  .tikrar-fruit-control-add { @apply bg-forest text-white shadow-forest/20 hover:bg-[#39684d]; }
   .review-session { @apply overflow-hidden rounded-[32px] bg-white shadow-[0_18px_55px_rgba(71,119,92,.14),0_2px_5px_rgba(71,119,92,.05)]; }
   .review-session > header { @apply px-5 pt-5 sm:px-7 sm:pt-6; }
   .review-hero { @apply bg-forest px-5 py-6 text-white sm:px-7; }
   .review-shuffle-button { @apply flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-2xl bg-forest px-4 text-sm font-bold text-white shadow-sm transition-[transform,background-color] active:scale-[0.96]; }
-  .review-ayah-card { @apply min-h-[320px] rounded-[26px] p-5 shadow-sm sm:p-6; }
+  .review-ayah-card { @apply min-h-[320px] cursor-pointer rounded-[26px] p-5 shadow-sm transition-[transform,box-shadow] duration-200 hover:shadow-md active:scale-[0.96] sm:p-6; }
   .review-question-card { @apply bg-[#fffaf2]; }
   .review-answer-card { @apply bg-[#eff6eb]; }
   .review-card-label { @apply text-xs font-bold uppercase tracking-[.14em]; }
   .review-arabic { @apply min-h-32 font-serif text-right text-[31px] leading-[2.15] text-forest sm:text-[36px]; }
   .review-audio-button { @apply flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-white text-forest shadow-sm transition-[transform,background-color,color] active:scale-[0.96]; }
   .review-audio-button-playing { @apply bg-forest text-white; }
+  .settings-overview { @apply relative flex items-start justify-between gap-5 overflow-hidden rounded-[30px] bg-forest px-5 py-6 shadow-[0_18px_42px_rgba(49,94,68,.22),0_2px_5px_rgba(49,94,68,.08)] sm:px-6; }
+  .settings-overview::after { content: ''; @apply pointer-events-none absolute -bottom-12 -right-9 h-36 w-36 rounded-full bg-white/10; }
+  .settings-overview-icon { @apply relative z-10 flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white/15 text-peach; }
+  .settings-section { @apply mt-5 p-5 sm:p-6; }
+  .settings-section-heading > p:last-child { @apply mt-1 text-sm leading-relaxed text-slate-500; }
+  .settings-add-button { @apply flex min-h-11 shrink-0 items-center gap-1.5 rounded-2xl bg-forest px-3.5 text-sm font-bold text-white shadow-sm shadow-forest/20 transition-[transform,background-color] duration-200 hover:bg-[#39684d] active:scale-[0.96]; }
+  .settings-editor { @apply mt-6 border-t border-sage/70 pt-5; }
+  .settings-editor-title { @apply mb-5 flex items-center gap-3 rounded-[22px] bg-[#eff6eb] p-3; }
+  .settings-repeat-row { @apply flex min-h-[76px] items-center gap-3 rounded-[22px] bg-[#f7faf4] p-3.5 transition-[background-color,box-shadow] duration-200 hover:bg-[#eff6eb] hover:shadow-sm; }
+  .settings-repeat-row small { @apply mt-0.5 block text-xs leading-relaxed text-slate-500; }
+  .settings-repeat-index { @apply flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white text-xs font-bold tabular-nums text-terracotta shadow-sm; }
+  .settings-repeat-input { @apply h-11 w-12 rounded-xl border border-sage bg-white text-center font-bold tabular-nums text-forest transition-[border-color,box-shadow] focus:border-forest focus:ring-2 focus:ring-forest/15; }
+  .settings-save-bar { @apply fixed inset-x-0 bottom-0 z-20 border-t border-white/80 bg-cream/90 px-4 py-3 shadow-[0_-10px_30px_rgba(71,119,92,.07)] backdrop-blur sm:px-6; }
+  .settings-save-bar > .primary-button { @apply mx-auto max-w-3xl; }
+
+  @media (hover: hover) {
+    .ayah-card:not(:disabled):hover { @apply -translate-y-0.5 bg-white; box-shadow: 0 14px 30px rgb(71 119 92 / 11%), 0 2px 4px rgb(71 119 92 / 6%); }
+    .ayah-card-active:hover { @apply bg-forest; box-shadow: 0 20px 38px rgb(71 119 92 / 27%), 0 2px 5px rgb(71 119 92 / 14%); }
+    .range-settings-toggle:hover { @apply bg-[#e7f1e3]; }
+    .bismillah-card:hover { @apply bg-[#fff7ea]; }
+  }
+}
+
+@media (min-width: 640px) {
+  .ayah-card { padding: 1.5rem; }
+  .ayah-card p[dir='rtl'] { font-size: 2rem; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ayah-card, .range-settings-toggle, .range-choice, .range-switch, .bismillah-card, .page-back-button, .page-action-button, .practice-shell > header, .tikrar-tree-fruit, .daily-checkin-action, .daily-checkin-ai { transition-duration: 0ms; }
+  .tikrar-basket-fruit { animation: none; }
 }
 
 @keyframes phase-in {
@@ -83,3 +155,4 @@
 }
 @keyframes coach-in { from { opacity: 0; transform: translateY(8px) scale(.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
 @keyframes coach-pulse { 50% { transform: scale(1.35); opacity: .65; } }
+@keyframes fruit-in-basket { from { opacity: 0; transform: translateY(-22px) scale(.45); } to { opacity: 1; transform: translateY(0) scale(1); } }

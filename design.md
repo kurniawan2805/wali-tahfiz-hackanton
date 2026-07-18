@@ -122,10 +122,10 @@ Latar halaman memakai gradasi radial hijau pucat dan persik yang sangat halus. K
 1. Wali menekan **Tambah** di agenda hari ini.
 2. Pilih **Hafalan Baru** atau **Murojaah**.
 3. Untuk hafalan baru, pilih surat dan rentang ayat melalui katalog, isian cepat `78:1-5`, atau input batas ayat.
-4. Tampilkan preview surat dan rentang sebelum menyimpan.
+4. Tampilkan preview surat dan rentang sebelum menyimpan; satu ayat juga merupakan target yang valid.
 5. Setelah tersimpan, target muncul paling atas pada agenda hari ini.
 
-Rentang hafalan baru harus minimal dua ayat dan selalu divalidasi terhadap jumlah ayat surat. Pesan kesalahan diletakkan dekat input dan menjelaskan format yang benar.
+Rentang hafalan baru dapat berisi satu atau lebih ayat dan selalu divalidasi terhadap jumlah ayat surat. Pesan kesalahan diletakkan dekat input dan menjelaskan format yang benar.
 
 ### Tiga tahap hafalan baru
 
@@ -133,9 +133,9 @@ Rentang hafalan baru harus minimal dua ayat dan selalu divalidasi terhadap jumla
 | --- | --- | --- |
 | Talaqqi | Anak mengenali bunyi ayat | Audio diputar sesuai jumlah pengulangan; lanjut otomatis ke Tikrar |
 | Tikrar | Anak menirukan bersama wali | Wali mengetuk penghitung sekali setiap pengulangan; lanjut aktif setelah target tercapai |
-| Rabt | Anak menyambungkan ayat | Putar contoh rentang bila perlu; lanjut ayat berikutnya atau simpan hafalan setelah selesai |
+| Rabt | Anak menyambungkan satu kartu hafalan | Dilakukan sekali setelah semua ayat kartu selesai; target satu ayat langsung disimpan setelah Tikrar |
 
-Di setiap tahap, tampilkan surat, rentang, progres ayat, dan tombol **Selesai untuk hari ini**. Jangan membuat pengguna merasa kehilangan data saat berhenti; sesi aktif disimpan untuk dilanjutkan.
+Di setiap tahap, tampilkan surat, rentang, progres ayat, dan tombol **Selesai untuk hari ini**. Jangan membuat pengguna merasa kehilangan data saat berhenti; sesi aktif disimpan untuk dilanjutkan. Saat semua kartu berurutan sudah menutup satu surat, jalankan Rabt surat otomatis. Rabt panjang dipecah menjadi blok maksimal 10 ayat dengan tahap sambungan antar-blok, agar surat seperti An-Naba tidak muncul sebagai satu layar 40 ayat.
 
 ### Murojaah dan pengulangan berjarak
 

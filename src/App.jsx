@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
-import { ArrowLeft, Baby, Bot, CalendarDays, Check, ChevronDown, CircleCheck, Clock3, Headphones, Leaf, Pause, Play, Plus, RotateCcw, Search, Send, Settings, Shuffle, SkipBack, SkipForward, SlidersHorizontal, Sparkles, Trash2, UserRound, Volume2, X } from 'lucide-react'
+import { ArrowLeft, ArrowRight, Baby, Bot, CalendarDays, Check, ChevronDown, CircleCheck, Clock3, Headphones, Leaf, Pause, Play, Plus, RotateCcw, Search, Send, Settings, Shuffle, SkipBack, SkipForward, SlidersHorizontal, Sparkles, Trash2, UserRound, Volume2, X } from 'lucide-react'
 import { db, getProfile, getQuranRange, getQuranRepeat, migrateLegacyStorage, normalizeFamilyProfile, saveProfile, saveQuranRange, saveQuranRepeat } from './db'
+import { createCoachCheckin, isPersonalAdvice } from './coachCheckin'
+import { createScheduledMemory, getReviewRecommendations, hasReviewTargetForToday, isCreatedToday, localDateKey, reviewDueLabel, scheduleReviewResult } from './reviewSchedule'
 
-const SPACED_INTERVALS = [1, 3, 7, 14, 30]
+const RABT_BLOCK_SIZE = 10
 const defaults = { role: 'Ibu', name: '', age: '', icon: '🌙', memorized: [], repeats: { talaqqi: 3, tikrar: 10, rabt: 1 } }
 const childDefaults = { name: '', age: '', icon: '🌙', memorized: [], repeats: { talaqqi: 3, tikrar: 10, rabt: 1 } }
 const icons = ['🌙', '⭐', '🕌', '🌿', '🕊️', '🌸']
@@ -31,26 +33,61 @@ const audioSurahs = [
   { id: '114', name: 'An-Nas', arabic: 'ٱلنَّاس', ayat: 6, group: 'juz30' },
 ]
 const onboardingSurahs = [audioSurahs.find((surah) => surah.id === '1'), ...audioSurahs.filter((surah) => surah.group === 'juz30').reverse()]
-const todayKey = () => new Date().toISOString().slice(0, 10)
-const addDays = (date, days) => { const next = new Date(date); next.setDate(next.getDate() + days); return next.toISOString().slice(0, 10) }
+const todayKey = () => localDateKey()
 const makeId = (prefix) => `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
 const createChild = () => ({ id: makeId('child'), ...childDefaults, memorized: [], repeats: { ...childDefaults.repeats } })
 const rangeLabel = (start, end) => `Ayat ${start}–${end}`
 const surahFor = (id) => audioSurahs.find((surah) => surah.id === id) || surahs.find((surah) => surah.id === id)
-const dueLabel = (memory) => { if (!memory.nextReviewAt) return 'Siap diulang'; const days = Math.ceil((new Date(`${memory.nextReviewAt}T00:00:00`) - new Date(`${todayKey()}T00:00:00`)) / 86400000); if (days <= 0) return 'Siap diulang'; return `Dalam ${days} hari` }
+const dueLabel = (memory) => reviewDueLabel(memory, todayKey())
 const bismillahText = 'بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ'
 const ACTIVE_TARGET_KEY = 'wali-tahfiz:active-target'
 const ACTIVE_MEMORY_KEY = 'wali-tahfiz:active-memory'
 const ACTIVE_PRACTICE_SESSION_KEY = 'wali-tahfiz:active-practice-session'
+const completeTodayCoachAction = async (childId) => {
+  const checkin = await db.coachCheckins.where('[childId+date]').equals([childId, todayKey()]).first()
+  if (!checkin || checkin.actionStatus !== 'acted' || !['start', 'review', 'new'].includes(checkin.actionTaken)) return
+  await db.coachCheckins.put({ ...checkin, actionStatus: 'completed', updatedAt: new Date().toISOString() })
+}
 const stripBismillah = (text, surahId, ayahNumber) => {
   if (String(surahId) === '1' || ayahNumber !== 1) return text || ''
   const source = (text || '').trim()
   const bismillah = /^ب[\u064B-\u065F\u0670\u0640]*س[\u064B-\u065F\u0670\u0640]*م[\u064B-\u065F\u0670\u0640]*\s+[ٱا][\u064B-\u065F\u0670\u0640]*ل[\u064B-\u065F\u0670\u0640]*ل[\u064B-\u065F\u0670\u0640]*ه[\u064B-\u065F\u0670\u0640]*\s+[ٱا][\u064B-\u065F\u0670\u0640]*ل[\u064B-\u065F\u0670\u0640]*ر[\u064B-\u065F\u0670\u0640]*ح[\u064B-\u065F\u0670\u0640]*م[\u064B-\u065F\u0670\u0640]*[\u0670أا]?[\u064B-\u065F\u0670\u0640]*ن[\u064B-\u065F\u0670\u0640]*\s+[ٱا][\u064B-\u065F\u0670\u0640]*ل[\u064B-\u065F\u0670\u0640]*ر[\u064B-\u065F\u0670\u0640]*ح[\u064B-\u065F\u0670\u0640]*[يیى][\u064B-\u065F\u0670\u0640]*م[\u064B-\u065F\u0670\u0640]*/
   return source.replace(bismillah, '').trim() || source
 }
+const createRabtSteps = (startAyah, endAyah) => {
+  const blocks = []
+  for (let start = startAyah; start <= endAyah; start += RABT_BLOCK_SIZE) blocks.push({ startAyah: start, endAyah: Math.min(endAyah, start + RABT_BLOCK_SIZE - 1) })
+  return blocks.flatMap((block, index) => index === 0
+    ? [{ type: 'block', ...block, blockIndex: index }]
+    : [{ type: 'bridge', startAyah: blocks[index - 1].endAyah, endAyah: block.startAyah, fromBlock: index - 1, toBlock: index }, { type: 'block', ...block, blockIndex: index }])
+}
+const coversWholeSurah = (memories, ayahCount) => {
+  let coveredUntil = 0
+  const ranges = memories
+    .map(({ startAyah, endAyah }) => ({ startAyah: Number(startAyah), endAyah: Number(endAyah) }))
+    .filter(({ startAyah, endAyah }) => Number.isFinite(startAyah) && Number.isFinite(endAyah))
+    .sort((left, right) => left.startAyah - right.startAyah || right.endAyah - left.endAyah)
+  for (const range of ranges) {
+    if (range.startAyah > coveredUntil + 1) break
+    coveredUntil = Math.max(coveredUntil, range.endAyah)
+    if (coveredUntil >= ayahCount) return true
+  }
+  return false
+}
 
 function Field({ label, hint, children }) { return <div className="block"><span className="mb-2 block text-sm font-bold text-slate-600">{label}</span>{children}{hint && <span className="mt-1.5 block text-xs text-slate-500">{hint}</span>}</div> }
 function Select({ label, value, onChange, options }) { return <Field label={label}><span className="relative block"><select value={value} onChange={onChange} className="input-field appearance-none pr-10">{options.map((o) => <option value={o.value} key={o.value}>{o.label}</option>)}</select><ChevronDown className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-forest" size={18}/></span></Field> }
+function TikrarFruitCounter({ count, target }) {
+  const fruits = Array.from({ length: target })
+  return <div className="tikrar-fruit-counter" role="status" aria-live="polite" aria-label={`${count} dari ${target} pengulangan selesai`}>
+    <div className="tikrar-tree" aria-hidden="true">
+      <div className="tikrar-tree-fruits">{fruits.map((_, index) => <span key={index} className={`tikrar-tree-fruit ${index < count ? 'tikrar-tree-fruit-picked' : ''}`}>🍎</span>)}</div>
+      <span className="tikrar-tree-trunk">🌳</span>
+    </div>
+    <div className="tikrar-basket" aria-hidden="true"><span className="tikrar-basket-icon">🧺</span><div className="tikrar-basket-fruits">{fruits.slice(0, count).map((_, index) => <span key={index} className="tikrar-basket-fruit">🍎</span>)}</div></div>
+    <p className="mt-4 text-sm font-semibold leading-relaxed text-forest">Setiap satu kali selesai didengar, satu buah masuk ke keranjang.</p>
+  </div>
+}
 function parseSurahRange(value, availableSurahs) {
   const match = value.trim().match(/^(\d{1,3})\s*:\s*(\d+)\s*-\s*(\d+)$/)
   if (!match) return { error: 'Gunakan format nomor surat:ayat-awal-akhir, misalnya 78:1-5.' }
@@ -59,11 +96,20 @@ function parseSurahRange(value, availableSurahs) {
   const startAyah = Number(startValue)
   const endAyah = Number(endValue)
   if (!surah) return { error: 'Surat tersebut belum tersedia di daftar Juz 30.' }
-  if (startAyah < 1 || endAyah > surah.ayat || startAyah >= endAyah) return { error: `Rentang ayat untuk QS. ${surah.name} harus antara 1–${surah.ayat} dan minimal dua ayat.` }
+  if (startAyah < 1 || endAyah > surah.ayat || startAyah > endAyah) return { error: `Rentang ayat untuk QS. ${surah.name} harus antara 1–${surah.ayat}.` }
   return { surah, startAyah, endAyah }
 }
 function RolePicker({ value, onChange }) { return <div className="grid grid-cols-2 gap-3">{['Ayah', 'Ibu'].map((role) => <button type="button" key={role} onClick={() => onChange(role)} className={`role-card ${value === role ? 'role-card-active' : ''}`}><span className="text-3xl">{role === 'Ayah' ? '👨🏻' : '👩🏻'}</span>{role}</button>)}</div> }
 function IconPicker({ value, onChange }) { return <div className="grid grid-cols-6 gap-2">{icons.map((icon) => <button type="button" key={icon} onClick={() => onChange(icon)} className={`icon-choice ${value === icon ? 'icon-choice-active' : ''}`}>{icon}</button>)}</div> }
+function PageHeader({ title, eyebrow = 'Wali Tahfiz', back, action, className = '' }) {
+  return <header className={`page-header ${className}`}>
+    <div className="flex min-w-0 items-center gap-3">
+      {back ? <button type="button" onClick={back} aria-label="Kembali" className="page-back-button"><ArrowLeft size={20}/></button> : <span className="brand-mark" aria-hidden="true"><Leaf size={20}/></span>}
+      <div className="min-w-0"><p className="page-eyebrow">{eyebrow}</p><h1 className="page-title">{title}</h1></div>
+    </div>
+    {action && <div className="shrink-0">{action}</div>}
+  </header>
+}
 
 function LegacyOnboarding({ save }) {
   const [step, setStep] = useState(1); const [profile, setProfile] = useState(defaults)
@@ -124,7 +170,7 @@ function Onboarding({ save }) {
     return { ...current, children, activeChildId: children.some((item) => item.id === current.activeChildId) ? current.activeChildId : children[0]?.id || null }
   })
   const finish = () => save({ id: 'family', role: family.role, children: family.children, activeChildId: family.children[0]?.id || null })
-  return <main className="min-h-screen bg-cream px-4 py-7 sm:py-12"><div className="mx-auto max-w-md"><header className="mb-7 flex gap-3"><span className="rounded-2xl bg-forest p-3 text-white"><Leaf size={22}/></span><div><p className="text-xs font-bold uppercase tracking-[.14em] text-forest/70">Wali Tahfiz</p><h1 className="font-display text-2xl text-forest">Mulai perjalanan hafalan</h1></div></header><section className="glass-card overflow-hidden"><div className="bg-forest px-6 py-5 text-white"><p className="text-sm font-semibold text-white/80">Langkah {step} dari 2</p><div className="mt-3 flex gap-2"><i className="h-1.5 flex-1 rounded-full bg-peach"/><i className={`h-1.5 flex-1 rounded-full ${step === 2 ? 'bg-peach' : 'bg-white/25'}`}/></div></div><div className="p-6">{step === 1 ? <><p className="step-label bg-peach text-terracotta"><UserRound size={13}/> SAPAAN KELUARGA</p><h2 className="font-display mt-3 text-2xl text-slate-700">Siapa yang menemani?</h2><p className="mt-1 text-sm text-slate-500">Pilihan ini akan dipakai untuk sapaan di aplikasi.</p><div className="mt-6"><RolePicker value={family.role} onChange={(role) => setFamily((current) => ({ ...current, role }))}/></div><button type="button" onClick={() => setStep(2)} className="primary-button mt-7">Lanjutkan <span aria-hidden="true">→</span></button></> : <><p className="step-label bg-sage text-forest"><Baby size={13}/> PROFIL ANAK</p><h2 className="font-display mt-3 text-2xl text-slate-700">Tambahkan anak satu per satu</h2><p className="mt-1 text-sm text-slate-500">Setiap anak menyimpan hafalan dan targetnya sendiri.</p>{family.children.length > 0 && <div className="mt-5"><p className="mb-2 text-xs font-bold uppercase tracking-[.12em] text-slate-400">Anak yang sudah ditambahkan</p><ChildList children={family.children} activeChildId={family.activeChildId} onEdit={editChild} onRemove={removeChild}/></div>}<div className="mt-6 border-t border-sage/70 pt-5"><p className="mb-4 text-sm font-bold text-forest">{editingChildId ? 'Ubah profil anak' : family.children.length ? 'Tambah anak berikutnya' : 'Profil anak pertama'}</p><ChildEditor child={child} onChange={setChild} includeMemorized autoFocus={!editingChildId && family.children.length === 0}/><button type="button" disabled={!child.name.trim()} onClick={saveChild} className="secondary-button mt-5 disabled:cursor-not-allowed disabled:opacity-45"><Plus size={18}/>{editingChildId ? 'Simpan perubahan anak' : 'Simpan anak & tambah lagi'}</button></div><div className="mt-5 flex gap-3"><button type="button" onClick={() => setStep(1)} className="secondary-button !flex-none"><ArrowLeft size={18}/><span className="sr-only">Kembali</span></button><button type="button" disabled={!family.children.length} onClick={finish} className="primary-button disabled:cursor-not-allowed disabled:opacity-45">Mulai bersama {family.role}</button></div></>}</div></section></div></main>
+  return <main className="app-page"><div className="page-shell page-shell-narrow"><PageHeader title="Mulai perjalanan hafalan"/><section className="glass-card page-card overflow-hidden"><div className="page-card-hero"><p className="text-sm font-semibold text-white/80">Langkah {step} dari 2</p><div className="mt-3 flex gap-2"><i className="h-1.5 flex-1 rounded-full bg-peach"/><i className={`h-1.5 flex-1 rounded-full ${step === 2 ? 'bg-peach' : 'bg-white/25'}`}/></div></div><div className="p-6 sm:p-7">{step === 1 ? <><p className="step-label bg-peach text-terracotta"><UserRound size={13}/> SAPAAN KELUARGA</p><h2 className="font-display mt-3 text-2xl text-slate-700">Siapa yang menemani?</h2><p className="mt-1 text-sm text-slate-500">Pilihan ini akan dipakai untuk sapaan di aplikasi.</p><div className="mt-6"><RolePicker value={family.role} onChange={(role) => setFamily((current) => ({ ...current, role }))}/></div><button type="button" onClick={() => setStep(2)} className="primary-button mt-7">Lanjutkan <span aria-hidden="true">→</span></button></> : <><p className="step-label bg-sage text-forest"><Baby size={13}/> PROFIL ANAK</p><h2 className="font-display mt-3 text-2xl text-slate-700">Tambahkan anak satu per satu</h2><p className="mt-1 text-sm text-slate-500">Setiap anak menyimpan hafalan dan targetnya sendiri.</p>{family.children.length > 0 && <div className="mt-5"><p className="mb-2 text-xs font-bold uppercase tracking-[.12em] text-slate-400">Anak yang sudah ditambahkan</p><ChildList children={family.children} activeChildId={family.activeChildId} onEdit={editChild} onRemove={removeChild}/></div>}<div className="mt-6 border-t border-sage/70 pt-5"><p className="mb-4 text-sm font-bold text-forest">{editingChildId ? 'Ubah profil anak' : family.children.length ? 'Tambah anak berikutnya' : 'Profil anak pertama'}</p><ChildEditor child={child} onChange={setChild} includeMemorized autoFocus={!editingChildId && family.children.length === 0}/><button type="button" disabled={!child.name.trim()} onClick={saveChild} className="secondary-button mt-5 disabled:cursor-not-allowed disabled:opacity-45"><Plus size={18}/>{editingChildId ? 'Simpan perubahan anak' : 'Simpan anak & tambah lagi'}</button></div><div className="mt-5 flex gap-3"><button type="button" onClick={() => setStep(1)} className="secondary-button !flex-none"><ArrowLeft size={18}/><span className="sr-only">Kembali</span></button><button type="button" disabled={!family.children.length} onClick={finish} className="primary-button disabled:cursor-not-allowed disabled:opacity-45">Mulai bersama {family.role}</button></div></>}</div></section></div></main>
 }
 
 function SettingsPage({ family, save, back }) {
@@ -148,7 +194,14 @@ function SettingsPage({ family, save, back }) {
   }
   const canSave = !draft.children.length || draft.children.every((child) => child.name.trim())
   const submit = async () => { if (!canSave) return; await save(draft, removedChildIds); back() }
-  return <main className="min-h-screen bg-cream pb-10"><div className="mx-auto max-w-lg px-4 pt-6"><header className="mb-6 flex items-center gap-3"><button type="button" onClick={back} aria-label="Kembali" className="icon-button"><ArrowLeft size={20}/></button><div><p className="text-xs font-bold uppercase tracking-[.14em] text-forest/70">Wali Tahfiz</p><h1 className="font-display text-3xl text-forest">Pengaturan</h1></div></header><section className="glass-card p-5"><h2 className="font-display text-xl text-slate-700">Profil keluarga</h2><p className="text-sm text-slate-500">Sapaan ini dipakai untuk semua anak.</p><div className="mt-5"><Field label="Sapaan wali"><RolePicker value={draft.role} onChange={(role) => setDraft((current) => ({ ...current, role }))}/></Field></div></section><section className="glass-card mt-5 p-5"><div className="flex items-start justify-between gap-4"><div><p className="step-label bg-peach text-terracotta"><Baby size={13}/> ANAK YANG DITEMANI</p><h2 className="font-display mt-3 text-xl text-slate-700">Profil & hafalan anak</h2><p className="mt-1 text-sm text-slate-500">Pilih anak sebelum mengubah datanya.</p></div><button type="button" onClick={addChild} className="flex min-h-11 shrink-0 items-center gap-1 rounded-2xl bg-forest px-3 text-sm font-bold text-white transition-transform active:scale-[0.96]"><Plus size={17}/> Tambah</button></div>{draft.children.length ? <><div className="mt-5"><ChildList children={draft.children} activeChildId={draft.activeChildId} onSelect={(id) => setDraft((current) => ({ ...current, activeChildId: id }))} onRemove={(id) => setPendingDeletion(draft.children.find((child) => child.id === id) || null)}/></div>{activeChild && <div className="mt-6 border-t border-sage/70 pt-5"><p className="mb-4 text-sm font-bold text-forest">Data {activeChild.name || 'anak ini'}</p><ChildEditor child={activeChild} onChange={updateChild} autoFocus={!activeChild.name}/></div>}</> : <p className="mt-5 rounded-2xl bg-[#fffaf2] p-4 text-sm leading-relaxed text-terracotta">Tidak ada profil anak. Simpan pengaturan untuk kembali ke onboarding.</p>}</section>{activeChild && <section className="glass-card mt-5 p-5"><p className="step-label bg-sage text-forest">ULANGAN HAFALAN BARU</p><h2 className="font-display mt-3 text-xl text-slate-700">Target di tiap langkah</h2><p className="mt-1 text-sm text-slate-500">Pengaturan ini hanya berlaku untuk {activeChild.name || 'anak yang dipilih'}.</p><div className="mt-5 space-y-3">{[['talaqqi', 'Dengarkan', 'Putar suara qari bersama'], ['tikrar', 'Ikuti', 'Anak menirukan bacaan wali'], ['rabt', 'Sambungkan', 'Satukan awal dan ujung ayat']].map(([key, title, helper]) => <div key={key} className="flex items-center justify-between rounded-2xl bg-[#f7faf4] p-4"><span><b className="block text-forest">{title}</b><small className="text-slate-500">{helper}</small></span><label className="flex items-center gap-2"><input aria-label={`Target ${title}`} type="number" min="1" value={activeChild.repeats[key]} onChange={(event) => updateChild({ ...activeChild, repeats: { ...activeChild.repeats, [key]: Math.max(1, Number(event.target.value) || 1) } })} className="w-14 rounded-xl border border-sage bg-white py-2 text-center font-bold tabular-nums text-forest"/><b className="text-slate-500">x</b></label></div>)}</div></section>}<button type="button" disabled={!canSave} onClick={submit} className="primary-button mt-6 disabled:cursor-not-allowed disabled:opacity-50"><Check size={19}/>{draft.children.length ? 'Simpan pengaturan' : 'Hapus profil & mulai ulang'}</button></div>{pendingDeletion && <div className="sheet-backdrop" role="presentation"><section className="sheet sm:max-w-md" role="dialog" aria-modal="true" aria-labelledby="delete-child-title"><p className="step-label bg-peach text-terracotta">KONFIRMASI HAPUS</p><h2 id="delete-child-title" className="font-display mt-3 text-2xl text-forest">Hapus {pendingDeletion.name || 'profil anak'}?</h2><p className="mt-2 text-sm leading-relaxed text-slate-600">Target hari ini dan hafalan tersimpan milik {pendingDeletion.name || 'anak ini'} akan ikut dihapus saat pengaturan disimpan. Tindakan ini tidak dapat dibatalkan.</p><div className="mt-6 flex gap-3"><button type="button" onClick={() => setPendingDeletion(null)} className="secondary-button">Batal</button><button type="button" onClick={confirmDelete} className="primary-button !bg-terracotta">Hapus anak</button></div></section></div>}</main>
+  return <main className="app-page pb-32"><div className="page-shell page-shell-settings">
+    <PageHeader title="Pengaturan" back={back}/>
+    <section className="settings-overview"><div><p className="text-xs font-bold uppercase tracking-[.14em] text-white/65">Keluarga Anda</p><h2 className="font-display mt-1 text-2xl text-white">{draft.role} menemani <span className="text-peach">{draft.children.length}</span> anak</h2><p className="mt-2 max-w-sm text-sm leading-relaxed text-white/75">Atur profil dan ritme belajar setiap anak dari satu tempat.</p></div><span className="settings-overview-icon" aria-hidden="true"><Settings size={25}/></span></section>
+    <section className="settings-section glass-card"><div className="settings-section-heading"><div><p className="step-label bg-[#eff6eb] text-forest"><UserRound size={13}/> PROFIL KELUARGA</p><h2 className="font-display mt-3 text-xl text-slate-700">Sapaan wali</h2><p>Digunakan di seluruh perjalanan hafalan keluarga.</p></div></div><div className="mt-5"><RolePicker value={draft.role} onChange={(role) => setDraft((current) => ({ ...current, role }))}/></div></section>
+    <section className="settings-section glass-card"><div className="flex items-start justify-between gap-4"><div className="settings-section-heading"><p className="step-label bg-peach text-terracotta"><Baby size={13}/> ANAK YANG DITEMANI</p><h2 className="font-display mt-3 text-xl text-slate-700">Profil & hafalan</h2><p>Pilih profil untuk melihat atau mengubah datanya.</p></div><button type="button" onClick={addChild} className="settings-add-button"><Plus size={17}/><span>Tambah</span></button></div>{draft.children.length ? <><div className="mt-5"><ChildList children={draft.children} activeChildId={draft.activeChildId} onSelect={(id) => setDraft((current) => ({ ...current, activeChildId: id }))} onRemove={(id) => setPendingDeletion(draft.children.find((child) => child.id === id) || null)}/></div>{activeChild && <div className="settings-editor"><div className="settings-editor-title"><span className="flex h-10 w-10 items-center justify-center rounded-xl bg-peach text-xl">{activeChild.icon}</span><div><p className="text-xs font-bold uppercase tracking-[.12em] text-terracotta">SEDANG DIEDIT</p><h3 className="font-display text-lg text-forest">{activeChild.name || 'Profil anak baru'}</h3></div></div><ChildEditor child={activeChild} onChange={updateChild} autoFocus={!activeChild.name}/></div>}</> : <p className="mt-5 rounded-[22px] bg-[#fffaf2] p-4 text-sm leading-relaxed text-terracotta">Belum ada profil anak. Tambahkan profil pertama, lalu simpan pengaturan.</p>}</section>
+    {activeChild && <section className="settings-section glass-card"><div className="settings-section-heading"><p className="step-label bg-sage text-forest">ULANGAN HAFALAN BARU</p><h2 className="font-display mt-3 text-xl text-slate-700">Target di tiap langkah</h2><p>Berlaku khusus untuk <b className="font-semibold text-forest">{activeChild.name || 'anak yang dipilih'}</b>.</p></div><div className="mt-5 space-y-2">{[['talaqqi', 'Dengarkan', 'Putar suara qari bersama'], ['tikrar', 'Ikuti', 'Anak menirukan bacaan wali'], ['rabt', 'Sambungkan', 'Satukan awal dan ujung ayat']].map(([key, title, helper], index) => <div key={key} className="settings-repeat-row"><span className="settings-repeat-index">0{index + 1}</span><span className="min-w-0 flex-1"><b className="block text-forest">{title}</b><small>{helper}</small></span><label className="flex shrink-0 items-center gap-2"><span className="sr-only">Target {title}</span><input aria-label={`Target ${title}`} type="number" min="1" value={activeChild.repeats[key]} onChange={(event) => updateChild({ ...activeChild, repeats: { ...activeChild.repeats, [key]: Math.max(1, Number(event.target.value) || 1) } })} className="settings-repeat-input"/><b className="text-slate-400">×</b></label></div>)}</div></section>}
+    <div className="settings-save-bar"><button type="button" disabled={!canSave} onClick={submit} className="primary-button disabled:cursor-not-allowed disabled:opacity-50"><Check size={19}/>{draft.children.length ? 'Simpan pengaturan' : 'Hapus profil & mulai ulang'}</button></div>
+  </div>{pendingDeletion && <div className="sheet-backdrop" role="presentation"><section className="sheet sm:max-w-md" role="dialog" aria-modal="true" aria-labelledby="delete-child-title"><p className="step-label bg-peach text-terracotta">KONFIRMASI HAPUS</p><h2 id="delete-child-title" className="font-display mt-3 text-2xl text-forest">Hapus {pendingDeletion.name || 'profil anak'}?</h2><p className="mt-2 text-sm leading-relaxed text-slate-600">Target hari ini dan hafalan tersimpan milik {pendingDeletion.name || 'anak ini'} akan ikut dihapus saat pengaturan disimpan. Tindakan ini tidak dapat dibatalkan.</p><div className="mt-6 flex gap-3"><button type="button" onClick={() => setPendingDeletion(null)} className="secondary-button">Batal</button><button type="button" onClick={confirmDelete} className="primary-button !bg-terracotta">Hapus anak</button></div></section></div>}</main>
 }
 
 function ChildSwitcher({ family, onSelect, onManage }) {
@@ -526,7 +579,7 @@ function AddTargetSheet({ memories, initialSurahId = '1', onSave, onClose }) {
   const visibleSurahs = newSurahs.filter((surah) => `${surah.id} ${surah.name}`.toLocaleLowerCase('id-ID').includes(surahQuery.toLocaleLowerCase('id-ID').trim()))
   const start = type === 'review' && selectedMemory ? selectedMemory.startAyah : startAyah
   const end = type === 'review' && selectedMemory ? selectedMemory.endAyah : endAyah
-  const canSave = type === 'new' ? selectedSurah && startAyah >= 1 && endAyah <= selectedSurah.ayat && startAyah < endAyah : Boolean(selectedMemory)
+  const canSave = type === 'new' ? selectedSurah && startAyah >= 1 && endAyah <= selectedSurah.ayat && startAyah <= endAyah : Boolean(selectedMemory)
   const chooseSurah = (id) => {
     const nextSurah = surahFor(id)
     setSurahId(id)
@@ -548,7 +601,7 @@ function AddTargetSheet({ memories, initialSurahId = '1', onSave, onClose }) {
     if (!canSave) return
     onSave({ id: makeId('target'), type, surahId: type === 'review' ? selectedMemory.surahId : surahId, startAyah: start, endAyah: end, status: 'todo', createdAt: new Date().toISOString(), memoryId: type === 'review' ? memoryId : null })
   }
-  return <div className="sheet-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose() }}><section className="sheet" role="dialog" aria-modal="true" aria-labelledby="target-sheet-title"><div className="flex items-start justify-between"><div><p className="step-label bg-peach text-terracotta">TARGET HARI INI</p><h2 id="target-sheet-title" className="font-display mt-2 text-2xl text-forest">Tambah aktivitas</h2><p className="mt-1 text-sm text-slate-500">Pilih satu langkah kecil untuk ditemani hari ini.</p></div><button type="button" onClick={onClose} aria-label="Tutup" className="icon-button"><X size={19}/></button></div><div className="mt-6 grid grid-cols-2 gap-2 rounded-2xl bg-[#f7faf4] p-1"><button type="button" onClick={() => setType('new')} className={`rounded-xl px-3 py-3 text-sm font-bold ${type === 'new' ? 'bg-white text-forest shadow-sm' : 'text-slate-500'}`}>Hafalan Baru</button><button type="button" onClick={() => setType('review')} className={`rounded-xl px-3 py-3 text-sm font-bold ${type === 'review' ? 'bg-white text-forest shadow-sm' : 'text-slate-500'}`}>Murojaah</button></div>{type === 'new' ? <div className="mt-5 space-y-4"><Field label="Pilih surat"><button type="button" onClick={() => setIsSurahPickerOpen((open) => !open)} aria-expanded={isSurahPickerOpen} aria-controls="surah-picker" className="flex min-h-12 w-full items-center gap-3 rounded-2xl bg-white px-4 text-left text-forest shadow-sm transition-[transform,box-shadow] active:scale-[0.96]"><span className="flex h-8 w-8 items-center justify-center rounded-xl bg-peach font-bold tabular-nums text-terracotta">{selectedSurah?.id}</span><span className="min-w-0 flex-1"><b className="block">QS. {selectedSurah?.name}</b><small className="block text-slate-500">{selectedSurah?.ayat} ayat</small></span><Search size={18} className="text-terracotta"/><ChevronDown size={18} className={`text-forest transition-transform ${isSurahPickerOpen ? 'rotate-180' : ''}`}/></button>{isSurahPickerOpen && <div id="surah-picker" className="mt-2 rounded-[20px] bg-[#f7faf4] p-2 shadow-[0_12px_28px_rgba(71,119,92,.13)]"><label className="relative block"><Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-forest" size={18}/><input autoFocus value={surahQuery} onChange={(event) => setSurahQuery(event.target.value)} placeholder="Cari nomor atau nama surat" className="input-field pl-10" aria-label="Cari surat untuk hafalan baru"/></label><div className="mt-2 max-h-52 space-y-1 overflow-y-auto pr-1" role="listbox" aria-label="Hasil pencarian surat">{visibleSurahs.length ? visibleSurahs.map((surah) => <button type="button" role="option" aria-selected={surah.id === surahId} key={surah.id} onClick={() => chooseSurah(surah.id)} className={`flex min-h-11 w-full items-center gap-3 rounded-xl px-3 text-left transition-[transform,background-color] active:scale-[0.96] ${surah.id === surahId ? 'bg-white text-forest shadow-sm' : 'text-slate-600 hover:bg-white/70'}`}><span className="w-7 font-bold tabular-nums text-terracotta">{surah.id}</span><span className="min-w-0 flex-1 font-semibold">{surah.name}</span><small className="text-slate-500">{surah.ayat} ayat</small></button>) : <p className="p-3 text-center text-sm text-slate-500">Surat tidak ditemukan.</p>}</div></div>}</Field><Field label="Isi cepat" hint="Tulis nomor surat dan rentang ayat, misalnya 78:1-5."><div className="flex gap-2"><input value={rangeInput} onChange={(event) => { setRangeInput(event.target.value); setRangeError('') }} onKeyDown={(event) => { if (event.key === 'Enter') { event.preventDefault(); applyRange() } }} placeholder="78:1-5" inputMode="text" className="input-field min-w-0 font-mono" aria-describedby={rangeError ? 'range-error' : undefined}/><button type="button" onClick={applyRange} className="shrink-0 rounded-2xl bg-forest px-4 text-sm font-bold text-white transition-transform active:scale-[0.96]">Pakai</button></div>{rangeError && <p id="range-error" role="alert" className="mt-2 text-xs font-semibold leading-relaxed text-terracotta">{rangeError}</p>}</Field><div className="grid grid-cols-2 gap-3"><Field label="Mulai ayat"><input type="number" min="1" max={selectedSurah?.ayat - 1} value={startAyah} onChange={(event) => setStartAyah(Math.max(1, Number(event.target.value) || 1))} className="input-field"/></Field><Field label="Sampai ayat"><input type="number" min="2" max={selectedSurah?.ayat} value={endAyah} onChange={(event) => setEndAyah(Math.max(2, Number(event.target.value) || 2))} className="input-field"/></Field></div></div> : memories.length ? <div className="mt-5 space-y-4"><Select label="Hafalan tersimpan" value={memoryId} onChange={(event) => setMemoryId(event.target.value)} options={memories.map((memory) => { const item = surahFor(memory.surahId); return { value: memory.id, label: `${item?.name || 'Surat'} · ${rangeLabel(memory.startAyah, memory.endAyah)}` } })}/><p className="rounded-2xl bg-[#eff6eb] p-4 text-sm leading-relaxed text-forest">Murojaah akan memakai rentang hafalan yang sudah tersimpan.</p></div> : <div className="mt-5 rounded-2xl bg-[#fff2df] p-5 text-sm leading-relaxed text-terracotta">Belum ada hafalan tersimpan. Selesaikan Hafalan Baru terlebih dahulu, lalu tambahkan ke Murojaah.</div>}<div className="mt-6 rounded-2xl bg-[#fffaf2] p-4 text-center"><p className="text-xs font-bold uppercase tracking-[0.14em] text-slate-400">Preview</p><p className="mt-1 font-display text-lg text-forest">{selectedSurah?.name || 'Pilih surat'} · {rangeLabel(start, end)}</p></div><button type="button" disabled={!canSave} onClick={save} className="primary-button mt-6 disabled:cursor-not-allowed disabled:opacity-45"><Plus size={19}/> Simpan target</button></section></div>
+  return <div className="sheet-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose() }}><section className="sheet" role="dialog" aria-modal="true" aria-labelledby="target-sheet-title"><div className="flex items-start justify-between"><div><p className="step-label bg-peach text-terracotta">TARGET HARI INI</p><h2 id="target-sheet-title" className="font-display mt-2 text-2xl text-forest">Tambah aktivitas</h2><p className="mt-1 text-sm text-slate-500">Pilih satu langkah kecil untuk ditemani hari ini.</p></div><button type="button" onClick={onClose} aria-label="Tutup" className="icon-button"><X size={19}/></button></div><div className="mt-6 grid grid-cols-2 gap-2 rounded-2xl bg-[#f7faf4] p-1"><button type="button" onClick={() => setType('new')} className={`rounded-xl px-3 py-3 text-sm font-bold ${type === 'new' ? 'bg-white text-forest shadow-sm' : 'text-slate-500'}`}>Hafalan Baru</button><button type="button" onClick={() => setType('review')} className={`rounded-xl px-3 py-3 text-sm font-bold ${type === 'review' ? 'bg-white text-forest shadow-sm' : 'text-slate-500'}`}>Murojaah</button></div>{type === 'new' ? <div className="mt-5 space-y-4"><Field label="Pilih surat"><button type="button" onClick={() => setIsSurahPickerOpen((open) => !open)} aria-expanded={isSurahPickerOpen} aria-controls="surah-picker" className="flex min-h-12 w-full items-center gap-3 rounded-2xl bg-white px-4 text-left text-forest shadow-sm transition-[transform,box-shadow] active:scale-[0.96]"><span className="flex h-8 w-8 items-center justify-center rounded-xl bg-peach font-bold tabular-nums text-terracotta">{selectedSurah?.id}</span><span className="min-w-0 flex-1"><b className="block">QS. {selectedSurah?.name}</b><small className="block text-slate-500">{selectedSurah?.ayat} ayat</small></span><Search size={18} className="text-terracotta"/><ChevronDown size={18} className={`text-forest transition-transform ${isSurahPickerOpen ? 'rotate-180' : ''}`}/></button>{isSurahPickerOpen && <div id="surah-picker" className="mt-2 rounded-[20px] bg-[#f7faf4] p-2 shadow-[0_12px_28px_rgba(71,119,92,.13)]"><label className="relative block"><Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-forest" size={18}/><input autoFocus value={surahQuery} onChange={(event) => setSurahQuery(event.target.value)} placeholder="Cari nomor atau nama surat" className="input-field pl-10" aria-label="Cari surat untuk hafalan baru"/></label><div className="mt-2 max-h-52 space-y-1 overflow-y-auto pr-1" role="listbox" aria-label="Hasil pencarian surat">{visibleSurahs.length ? visibleSurahs.map((surah) => <button type="button" role="option" aria-selected={surah.id === surahId} key={surah.id} onClick={() => chooseSurah(surah.id)} className={`flex min-h-11 w-full items-center gap-3 rounded-xl px-3 text-left transition-[transform,background-color] active:scale-[0.96] ${surah.id === surahId ? 'bg-white text-forest shadow-sm' : 'text-slate-600 hover:bg-white/70'}`}><span className="w-7 font-bold tabular-nums text-terracotta">{surah.id}</span><span className="min-w-0 flex-1 font-semibold">{surah.name}</span><small className="text-slate-500">{surah.ayat} ayat</small></button>) : <p className="p-3 text-center text-sm text-slate-500">Surat tidak ditemukan.</p>}</div></div>}</Field><Field label="Isi cepat" hint="Tulis nomor surat dan rentang ayat, misalnya 78:1-5 atau 114:1-1."><div className="flex gap-2"><input value={rangeInput} onChange={(event) => { setRangeInput(event.target.value); setRangeError('') }} onKeyDown={(event) => { if (event.key === 'Enter') { event.preventDefault(); applyRange() } }} placeholder="78:1-5" inputMode="text" className="input-field min-w-0 font-mono" aria-describedby={rangeError ? 'range-error' : undefined}/><button type="button" onClick={applyRange} className="shrink-0 rounded-2xl bg-forest px-4 text-sm font-bold text-white transition-transform active:scale-[0.96]">Pakai</button></div>{rangeError && <p id="range-error" role="alert" className="mt-2 text-xs font-semibold leading-relaxed text-terracotta">{rangeError}</p>}</Field><div className="grid grid-cols-2 gap-3"><Field label="Mulai ayat"><input type="number" min="1" max={selectedSurah?.ayat} value={startAyah} onChange={(event) => { const next = Math.max(1, Math.min(selectedSurah?.ayat || 1, Number(event.target.value) || 1)); setStartAyah(next); if (next > endAyah) setEndAyah(next) }} className="input-field"/></Field><Field label="Sampai ayat"><input type="number" min={startAyah} max={selectedSurah?.ayat} value={endAyah} onChange={(event) => setEndAyah(Math.max(startAyah, Math.min(selectedSurah?.ayat || 1, Number(event.target.value) || startAyah)))} className="input-field"/></Field></div></div> : memories.length ? <div className="mt-5 space-y-4"><Select label="Hafalan tersimpan" value={memoryId} onChange={(event) => setMemoryId(event.target.value)} options={memories.map((memory) => { const item = surahFor(memory.surahId); return { value: memory.id, label: `${item?.name || 'Surat'} · ${rangeLabel(memory.startAyah, memory.endAyah)}` } })}/><p className="rounded-2xl bg-[#eff6eb] p-4 text-sm leading-relaxed text-forest">Murojaah akan memakai rentang hafalan yang sudah tersimpan.</p></div> : <div className="mt-5 rounded-2xl bg-[#fff2df] p-5 text-sm leading-relaxed text-terracotta">Belum ada hafalan tersimpan. Selesaikan Hafalan Baru terlebih dahulu, lalu tambahkan ke Murojaah.</div>}<div className="mt-6 rounded-2xl bg-[#fffaf2] p-4 text-center"><p className="text-xs font-bold uppercase tracking-[0.14em] text-slate-400">Preview</p><p className="mt-1 font-display text-lg text-forest">{selectedSurah?.name || 'Pilih surat'} · {rangeLabel(start, end)}</p></div><button type="button" disabled={!canSave} onClick={save} className="primary-button mt-6 disabled:cursor-not-allowed disabled:opacity-45"><Plus size={19}/> Simpan target</button></section></div>
 }
 
 function ReviewPlayer({ memory, onClose, onReviewed, page = false }) {
@@ -609,6 +662,18 @@ function ReviewPlayer({ memory, onClose, onReviewed, page = false }) {
   const answerVerse = verses.find((ayah) => ayah.number === questionAyah + 1)
   const hasAnswer = Boolean(answerVerse)
 
+  useEffect(() => {
+    const playCardAyah = (event) => {
+      if (!(event.target instanceof Element) || event.target.closest('button')) return
+      const card = event.target.closest('.review-ayah-card')
+      if (!card) return
+      if (card.classList.contains('review-question-card')) playAyah(questionAyah)
+      else if (card.classList.contains('review-answer-card') && answerVerse) playAyah(answerVerse.number)
+    }
+    document.addEventListener('click', playCardAyah)
+    return () => document.removeEventListener('click', playCardAyah)
+  }, [activeAyah, answerVerse, isPlaying, questionAyah])
+
   const pageHeader = <header className="flex items-center justify-between"><button type="button" onClick={onClose} className="flex min-h-11 items-center gap-2 text-sm font-bold text-forest"><ArrowLeft size={18}/> Kembali ke beranda</button><span className="rounded-full bg-sage px-3 py-1.5 text-xs font-bold text-forest">MUROJAAH</span></header>
   const dialogHeader = <header className="flex items-center justify-between gap-3"><button type="button" onClick={onClose} aria-label="Kembali ke beranda" className="icon-button"><ArrowLeft size={20}/></button><div className="min-w-0 flex-1 text-center"><p className="text-xs font-bold uppercase tracking-[.14em] text-forest/70">Wali Tahfiz</p><h1 id="review-title" className="font-display text-2xl text-forest">Murojaah</h1></div><span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-sage text-forest"><RotateCcw size={20}/></span></header>
   const content = <section className={`review-session ${page ? 'w-full' : 'sheet'}`} role={page ? undefined : 'dialog'} aria-modal={page || undefined} aria-labelledby="review-title"><audio ref={audioRef} src={audioUrl} onPlay={() => setIsPlaying(true)} onPause={() => setIsPlaying(false)} onEnded={() => setIsPlaying(false)}/>{!page && dialogHeader}<div className={`review-hero ${page ? '' : 'mt-5'}`}><p className="step-label bg-white/15 text-white"><Shuffle size={14}/> SOAL ACAK</p><div className="mt-3 flex flex-wrap items-end justify-between gap-3"><div><h1 id={page ? 'review-title' : undefined} className="font-display text-3xl">QS. {item?.name}</h1><p className="mt-1 text-sm font-semibold text-white/70">{rangeLabel(memory.startAyah, memory.endAyah)} · sambungkan satu ayat</p></div><span className="rounded-full bg-white/15 px-3 py-1.5 text-sm font-bold tabular-nums">{questionAyah ? `Soal ${questionAyah}` : 'Memilih soal'}</span></div></div><div className="p-5 sm:p-7"><div className="flex flex-wrap items-center justify-between gap-3 rounded-[22px] bg-[#eff6eb] px-4 py-3"><p className="text-sm leading-relaxed text-forest"><b className="block">Cara bermain</b><span className="text-slate-500">Baca soal, beri waktu anak menjawab, lalu cocokkan jawabannya.</span></p><button type="button" onClick={randomizeQuestion} className="review-shuffle-button"><Shuffle size={18}/> Acak soal</button></div>{loadError ? <p role="alert" className="mt-5 rounded-2xl bg-[#fff2df] p-4 text-sm font-semibold text-terracotta">{loadError}</p> : isLoading ? <div className="mt-5 flex min-h-72 items-center justify-center rounded-[26px] bg-[#fffaf2] text-center"><p className="text-sm font-semibold text-slate-500">Menyiapkan soal murojaah…</p></div> : <div className="mt-5 grid gap-4 lg:grid-cols-2"><section className="review-ayah-card review-question-card"><div className="flex items-start justify-between gap-3"><div><p className="review-card-label text-terracotta">SOAL · AYAT {questionAyah}</p><h2 className="font-display mt-1 text-2xl text-forest">Bacakan ayat ini</h2></div><button type="button" onClick={() => playAyah(questionAyah)} aria-label={activeAyah === questionAyah && isPlaying ? `Jeda ayat ${questionAyah}` : `Putar ulang ayat ${questionAyah}`} className={`review-audio-button ${activeAyah === questionAyah && isPlaying ? 'review-audio-button-playing' : ''}`}>{activeAyah === questionAyah && isPlaying ? <Pause size={20} fill="currentColor"/> : <Volume2 size={20}/>}</button></div><p className="review-arabic mt-8" dir="rtl">{questionVerse?.text || 'Ayat tidak tersedia.'}</p><div className="mt-6 flex items-center justify-between gap-3 border-t border-terracotta/15 pt-4"><span className="text-sm font-semibold text-slate-500">Dengarkan lagi bila perlu</span><button type="button" onClick={() => playAyah(questionAyah)} className="text-sm font-bold text-terracotta">{activeAyah === questionAyah && isPlaying ? 'Jeda audio' : 'Putar soal'}</button></div></section><section className="review-ayah-card review-answer-card"><div className="flex items-start justify-between gap-3"><div><p className="review-card-label text-forest">JAWABAN · AYAT {hasAnswer ? questionAyah + 1 : questionAyah}</p><h2 className="font-display mt-1 text-2xl text-forest">Sambungan yang benar</h2></div>{hasAnswer && <button type="button" onClick={() => playAyah(answerVerse.number)} aria-label={activeAyah === answerVerse.number && isPlaying ? `Jeda ayat ${answerVerse.number}` : `Putar ulang ayat ${answerVerse.number}`} className={`review-audio-button ${activeAyah === answerVerse.number && isPlaying ? 'review-audio-button-playing' : ''}`}>{activeAyah === answerVerse.number && isPlaying ? <Pause size={20} fill="currentColor"/> : <Volume2 size={20}/>}</button>}</div><p className="review-arabic mt-8" dir="rtl">{answerVerse?.text || 'Rentang ini hanya memiliki satu ayat.'}</p><div className="mt-6 flex items-center justify-between gap-3 border-t border-sage pt-4"><span className="text-sm font-semibold text-slate-500">Cocokkan setelah anak menjawab</span>{hasAnswer && <button type="button" onClick={() => playAyah(answerVerse.number)} className="text-sm font-bold text-forest">{activeAyah === answerVerse.number && isPlaying ? 'Jeda audio' : 'Putar jawaban'}</button>}</div></section></div>}<div className="mt-6 rounded-[24px] bg-[#fffaf2] p-4 text-center"><p className="text-sm font-bold text-forest">Bagaimana kelancaran murojaah hari ini?</p><div className="mt-3 grid gap-3 sm:grid-cols-2"><button type="button" onClick={() => onReviewed('repeat')} className="secondary-button !border-peach !text-terracotta"><RotateCcw size={18}/> Butuh ulang</button><button type="button" onClick={() => onReviewed('pass')} className="primary-button"><Check size={19}/> Lancar</button></div></div></div></section>
@@ -657,21 +722,33 @@ function LegacyNewMemoryFlow({ target, profile, phase, onCancel, onNavigate, onF
 
 function NewMemoryFlow({ target, profile, phase, session, onCancel, onNavigate, onUpdateSession, onFinish, onEndSession }) {
   const audioRef = useRef(null)
+  const talaqqiPlaybackRef = useRef(0)
   const [practice, setPractice] = useState(() => ({ ...session, phase }))
   const [verses, setVerses] = useState([])
   const [isLoading, setIsLoading] = useState(true)
   const [loadError, setLoadError] = useState('')
   const [rangeAudioAyah, setRangeAudioAyah] = useState(null)
   const [isPlaying, setIsPlaying] = useState(false)
+  const [audioError, setAudioError] = useState('')
   const item = surahFor(target.surahId)
   const activeAyah = Math.min(target.endAyah, Math.max(target.startAyah, Number(practice.currentAyah) || target.startAyah))
   const talaqqiTarget = Math.max(1, Number(profile.repeats.talaqqi) || defaults.repeats.talaqqi)
   const talaqqiPlayCount = Math.min(talaqqiTarget, Number(practice.talaqqiPlayCount) || 0)
   const tikrarTarget = Math.max(1, Number(profile.repeats.tikrar) || defaults.repeats.tikrar)
   const tikrarCount = Math.min(tikrarTarget, Number(practice.tikrarCount) || 0)
+  const rabtScope = practice.rabtScope || 'card'
+  const defaultRabtStartAyah = rabtScope === 'surah' ? 1 : target.startAyah
+  const defaultRabtEndAyah = rabtScope === 'surah' ? item?.ayat || target.endAyah : target.endAyah
+  const rabtStartAyah = Math.max(1, Number(practice.rabtStartAyah) || defaultRabtStartAyah)
+  const rabtEndAyah = Math.min(item?.ayat || target.endAyah, Number(practice.rabtEndAyah) || defaultRabtEndAyah)
+  const rabtSteps = createRabtSteps(rabtStartAyah, rabtEndAyah)
+  const rabtStepIndex = Math.min(rabtSteps.length - 1, Math.max(0, Number(practice.rabtStepIndex) || 0))
+  const rabtStep = rabtSteps[rabtStepIndex] || rabtSteps[0]
+  const rabtDisplayStart = rabtStep?.startAyah || rabtStartAyah
+  const rabtDisplayEnd = rabtStep?.endAyah || rabtEndAyah
   const sourceAyah = phase === 'rabt' && rangeAudioAyah ? rangeAudioAyah : activeAyah
   const audioUrl = `https://verses.quran.foundation/Alafasy/mp3/${String(target.surahId).padStart(3, '0')}${String(sourceAyah).padStart(3, '0')}.mp3`
-  const rangeVerses = verses.filter((ayah) => ayah.number >= target.startAyah && ayah.number <= activeAyah)
+  const rangeVerses = verses.filter((ayah) => ayah.number >= rabtDisplayStart && ayah.number <= rabtDisplayEnd)
   const updatePractice = (changes) => {
     const next = { ...practice, ...changes, targetId: target.id }
     setPractice(next)
@@ -683,6 +760,10 @@ function NewMemoryFlow({ target, profile, phase, session, onCancel, onNavigate, 
     setPractice(next)
     onUpdateSession(next)
   }, [phase, target.id])
+
+  useEffect(() => {
+    talaqqiPlaybackRef.current = phase === 'talaqqi' ? Math.min(talaqqiTarget, Number(session.talaqqiPlayCount) || 0) : 0
+  }, [activeAyah, phase, talaqqiTarget])
 
   useEffect(() => {
     const controller = new AbortController()
@@ -704,42 +785,70 @@ function NewMemoryFlow({ target, profile, phase, session, onCancel, onNavigate, 
   useEffect(() => {
     if (!isPlaying || !audioRef.current) return
     audioRef.current.load()
-    audioRef.current.play().catch(() => setIsPlaying(false))
+    audioRef.current.play().catch(() => {
+      setIsPlaying(false)
+      setAudioError('Audio belum bisa diputar. Periksa koneksi, lalu coba lagi.')
+    })
   }, [audioUrl, isPlaying])
 
   const handleAudioEnded = () => {
     if (phase === 'talaqqi') {
-      if (talaqqiPlayCount < talaqqiTarget) {
-        updatePractice({ talaqqiPlayCount: talaqqiPlayCount + 1 })
+      if (talaqqiPlaybackRef.current < talaqqiTarget) {
+        const nextCount = talaqqiPlaybackRef.current + 1
+        talaqqiPlaybackRef.current = nextCount
+        updatePractice({ talaqqiPlayCount: nextCount })
         audioRef.current.currentTime = 0
-        audioRef.current.play().catch(() => setIsPlaying(false))
+        audioRef.current.play().catch(() => {
+          setIsPlaying(false)
+          setAudioError('Audio belum bisa diputar. Periksa koneksi, lalu coba lagi.')
+        })
         return
       }
+      talaqqiPlaybackRef.current = 0
       updatePractice({ phase: 'tikrar', tikrarCount: 0, talaqqiPlayCount: 0 })
       onNavigate('/tikrar')
       return
     }
-    if (phase === 'rabt' && rangeAudioAyah && rangeAudioAyah < activeAyah) {
+    if (phase === 'rabt' && rangeAudioAyah && rangeAudioAyah < rabtDisplayEnd) {
       setRangeAudioAyah(rangeAudioAyah + 1)
       return
     }
     setIsPlaying(false)
     setRangeAudioAyah(null)
   }
-  const playTalaqqi = () => { updatePractice({ talaqqiPlayCount: 1 }); setRangeAudioAyah(null); setIsPlaying(true) }
-  const playRabtRange = () => { setRangeAudioAyah(target.startAyah); setIsPlaying(true) }
+  const playTalaqqi = () => { talaqqiPlaybackRef.current = 1; updatePractice({ talaqqiPlayCount: 1 }); setRangeAudioAyah(null); setAudioError(''); setIsPlaying(true) }
+  const playRabtRange = () => { setRangeAudioAyah(rabtDisplayStart); setAudioError(''); setIsPlaying(true) }
   const addTikrar = () => updatePractice({ tikrarCount: Math.min(tikrarTarget, tikrarCount + 1) })
-  const finishTikrar = () => {
-    updatePractice({ phase: 'rabt', tikrarCount: 0 })
+  const removeTikrar = () => updatePractice({ tikrarCount: Math.max(0, tikrarCount - 1) })
+  const finishTalaqqi = () => {
+    talaqqiPlaybackRef.current = 0
+    updatePractice({ phase: 'tikrar', tikrarCount: 0, talaqqiPlayCount: 0 })
+    onNavigate('/tikrar')
+  }
+  const beginRabt = () => {
+    updatePractice({ phase: 'rabt', tikrarCount: 0, rabtScope: 'card', rabtStartAyah: target.startAyah, rabtEndAyah: target.endAyah, rabtStepIndex: 0 })
     onNavigate('/rabt')
   }
+  const finishTikrar = () => {
+    if (activeAyah < target.endAyah) {
+      updatePractice({ phase: 'talaqqi', currentAyah: activeAyah + 1, tikrarCount: 0, talaqqiPlayCount: 0 })
+      onNavigate('/talaqqi')
+      return
+    }
+    if (target.startAyah === target.endAyah) return onFinish({ rabtScope: 'none' })
+    beginRabt()
+  }
   const continueAfterRabt = () => {
-    updatePractice({ phase: 'talaqqi', currentAyah: activeAyah + 1, tikrarCount: 0, talaqqiPlayCount: 0 })
-    onNavigate('/talaqqi')
+    if (rabtStepIndex < rabtSteps.length - 1) {
+      updatePractice({ rabtStepIndex: rabtStepIndex + 1 })
+      return
+    }
+    onFinish({ rabtScope })
   }
   const retryRabt = () => {
     audioRef.current?.pause()
-    setRangeAudioAyah(target.startAyah)
+    setRangeAudioAyah(rabtDisplayStart)
+    setAudioError('')
     setIsPlaying(true)
   }
   const closeForToday = () => {
@@ -748,8 +857,52 @@ function NewMemoryFlow({ target, profile, phase, session, onCancel, onNavigate, 
   }
   const phaseLabel = phase === 'talaqqi' ? 'TALAQQI' : phase === 'tikrar' ? 'TIKRAR' : 'RABT'
   const currentVerse = verses.find((ayah) => ayah.number === activeAyah)
+  const previousPhase = phase === 'tikrar' ? 'talaqqi' : phase === 'rabt' && rabtScope === 'card' ? 'tikrar' : null
+  const nextDisabled = phase === 'talaqqi'
+    ? talaqqiPlayCount < talaqqiTarget
+    : phase === 'tikrar'
+      ? tikrarCount < tikrarTarget
+      : false
+  const previousLabel = phase === 'rabt' && rabtStepIndex > 0 ? 'Rabt sebelumnya' : previousPhase ? `Kembali ke ${previousPhase === 'talaqqi' ? 'Talaqqi' : 'Tikrar'}` : 'Selesai untuk hari ini'
+  const nextLabel = phase === 'talaqqi'
+    ? 'Lanjut ke Tikrar'
+    : phase === 'tikrar'
+      ? activeAyah < target.endAyah ? `Lanjut ayat ${activeAyah + 1}` : target.startAyah === target.endAyah ? 'Simpan hafalan' : 'Lanjut ke Rabt'
+      : rabtStepIndex < rabtSteps.length - 1
+        ? rabtSteps[rabtStepIndex + 1]?.type === 'bridge' ? 'Sambungkan blok berikutnya' : 'Lanjut Rabt'
+        : rabtScope === 'surah' ? 'Selesai Rabt surat' : 'Simpan hafalan'
+  const goPrevious = () => {
+    audioRef.current?.pause()
+    setIsPlaying(false)
+    setRangeAudioAyah(null)
+    if (phase === 'rabt' && rabtStepIndex > 0) return updatePractice({ rabtStepIndex: rabtStepIndex - 1 })
+    if (!previousPhase) return closeForToday()
+    updatePractice({ phase: previousPhase })
+    onNavigate(`/${previousPhase}`)
+  }
+  const goNext = () => {
+    if (nextDisabled) return
+    if (phase === 'talaqqi') return finishTalaqqi()
+    if (phase === 'tikrar') return finishTikrar()
+    continueAfterRabt()
+  }
+  const advanceDemo = () => {
+    audioRef.current?.pause()
+    setIsPlaying(false)
+    setRangeAudioAyah(null)
+    if (phase === 'talaqqi') return finishTalaqqi()
+    if (phase === 'tikrar') return beginRabt()
+    onFinish({ rabtScope })
+  }
 
-  return <main className="practice-page"><audio ref={audioRef} src={audioUrl} preload="none" onPlay={() => setIsPlaying(true)} onPause={() => setIsPlaying(false)} onEnded={handleAudioEnded}/><div className="practice-shell"><header className="flex items-center justify-between"><button type="button" onClick={closeForToday} className="flex min-h-11 items-center gap-2 text-sm font-bold text-forest"><ArrowLeft size={18}/> Selesai untuk hari ini</button><span className="rounded-full bg-peach px-3 py-1.5 text-xs font-bold text-terracotta">5 MENIT BERSAMA</span></header><section className="glass-card mt-5 w-full overflow-hidden lg:mt-8"><div className="bg-forest px-5 py-6 text-white lg:px-10 lg:py-8"><p className="text-sm font-semibold text-white/70">QS. {item?.name} · {rangeLabel(target.startAyah, target.endAyah)}</p><div className="mt-2 flex flex-wrap items-end justify-between gap-3"><h1 className="font-display text-3xl lg:text-4xl">{phaseLabel}</h1><span className="rounded-full bg-white/15 px-3 py-1.5 text-sm font-bold tabular-nums">Ayat {activeAyah}/{target.endAyah}</span></div><div className="mt-6 grid grid-cols-3 gap-2 text-center text-xs font-bold"><span className={phase === 'talaqqi' ? 'text-peach' : 'text-white/60'}>1. Dengarkan</span><span className={phase === 'tikrar' ? 'text-peach' : 'text-white/60'}>2. Ikuti</span><span className={phase === 'rabt' ? 'text-peach' : 'text-white/60'}>3. Sambungkan</span></div></div><div className="p-5 lg:p-10">{loadError ? <p role="alert" className="rounded-2xl bg-[#fff2df] p-4 text-sm text-terracotta">{loadError}</p> : <><div className={`practice-ayah-panel ${phase === 'rabt' ? 'practice-ayah-panel-scroll' : ''}`}><p className="font-serif text-right text-4xl leading-[2.1] text-terracotta lg:text-6xl" dir="rtl">{isLoading ? 'Memuat ayat…' : phase === 'rabt' ? rangeVerses.map((ayah) => <span key={ayah.number} className="block">{ayah.text} <small className="mr-2 font-sans text-base font-bold text-slate-400">{ayah.number}</small></span>) : currentVerse?.text}</p></div><p className="mt-3 text-center text-xs font-bold uppercase tracking-[0.16em] text-slate-400">{phase === 'rabt' ? rangeLabel(target.startAyah, activeAyah) : `Ayat ${activeAyah}`}</p></>}{phase === 'talaqqi' && <div className="mx-auto mt-8 max-w-2xl"><p className="step-label bg-sage text-forest">LANGKAH 1 · DENGARKAN</p><h2 className="font-display mt-3 text-3xl text-forest">Dengarkan ayat ini {talaqqiTarget}×</h2><p className="mt-2 text-sm leading-relaxed text-slate-600">Audio ayat akan diputar otomatis sebanyak {talaqqiTarget} kali, lalu dilanjutkan ke Tikrar.</p><button type="button" disabled={isLoading || isPlaying} onClick={playTalaqqi} className="primary-button mt-6 disabled:cursor-not-allowed disabled:opacity-50"><Volume2 size={20}/>{isPlaying ? `Memutar ${talaqqiPlayCount}/${talaqqiTarget}×…` : `Putar ayat ${activeAyah} ${talaqqiTarget}×`}</button></div>}{phase === 'tikrar' && <div className="mx-auto mt-8 max-w-2xl"><p className="step-label bg-sage text-forest">LANGKAH 2 · IKUTI</p><h2 className="font-display mt-3 text-3xl text-forest">Ulangi bersama {tikrarTarget}×</h2><p className="mt-2 text-sm leading-relaxed text-slate-600">Orang tua membacakan perlahan, lalu anak menirukan. Ketuk tombol setiap satu kali pengulangan.</p><div className="mt-6 rounded-[26px] bg-[#eff6eb] p-5 text-center"><p className="font-display text-5xl tabular-nums text-forest">{tikrarCount}<span className="text-2xl text-forest/50">/{tikrarTarget}</span></p><button type="button" disabled={tikrarCount >= tikrarTarget} onClick={addTikrar} className="secondary-button mt-4 w-full disabled:cursor-not-allowed disabled:opacity-45"><Plus size={18}/> Sudah ulang</button></div><button type="button" disabled={tikrarCount < tikrarTarget} onClick={finishTikrar} className="primary-button mt-4 disabled:cursor-not-allowed disabled:opacity-45"><Check size={20}/> Lanjutkan ke Rabt</button></div>}{phase === 'rabt' && <div className="mx-auto mt-8 max-w-2xl"><p className="step-label bg-sage text-forest">LANGKAH 3 · SAMBUNGKAN</p><h2 className="font-display mt-3 text-3xl text-forest">Sambungkan ayatnya</h2><p className="mt-2 text-sm leading-relaxed text-slate-600">Berikan waktu anak melanjutkan. Putar rentang ayat ini bila membutuhkan contoh.</p><button type="button" disabled={isLoading || isPlaying} onClick={playRabtRange} className="secondary-button mt-6 w-full disabled:cursor-not-allowed disabled:opacity-45"><Volume2 size={18}/>{isPlaying ? `Memutar ayat ${rangeAudioAyah}…` : `Putar contoh ${rangeLabel(target.startAyah, activeAyah)}`}</button>{activeAyah < target.endAyah ? <button type="button" onClick={continueAfterRabt} className="primary-button mt-3"><Check size={20}/> Lanjut ayat {activeAyah + 1}</button> : <div className="mt-5"><p className="rounded-2xl bg-[#eff6eb] p-4 text-center text-sm font-bold text-forest">Bagaimana kelancaran hafalan hari ini?</p><div className="mt-3 grid gap-3 sm:grid-cols-2"><button type="button" onClick={retryRabt} className="secondary-button !border-peach !text-terracotta"><RotateCcw size={18}/> Ulangi Rabt</button><button type="button" onClick={onFinish} className="primary-button"><Check size={19}/> Lancar</button></div><button type="button" onClick={closeForToday} className="mt-4 flex min-h-11 w-full items-center justify-center text-sm font-bold text-slate-500">Selesai untuk hari ini</button></div>}</div>}</div></section></div></main>
+  const rabtTitle = rabtScope === 'surah' ? 'Sambungkan satu surat' : 'Sambungkan kartu ini'
+  const rabtHelper = rabtStep?.type === 'bridge'
+    ? `Ajak anak meneruskan dari ayat ${rabtDisplayStart} ke ayat ${rabtDisplayEnd}.`
+    : rabtScope === 'surah'
+      ? 'Kita sambungkan surat ini sedikit demi sedikit, satu blok pada satu waktu.'
+      : 'Berikan waktu anak melanjutkan ayat-ayat dalam kartu ini.'
+
+  return <main className="practice-page"><audio ref={audioRef} src={audioUrl} preload="none" onPlay={() => { setAudioError(''); setIsPlaying(true) }} onPause={() => { if (!audioRef.current?.ended) setIsPlaying(false) }} onError={() => { setIsPlaying(false); setAudioError('Audio belum bisa diputar. Periksa koneksi, lalu coba lagi.') }} onEnded={handleAudioEnded}/><div className="practice-shell"><header className="flex items-center justify-between gap-3"><button type="button" onClick={closeForToday} className="flex min-h-11 items-center gap-2 text-sm font-bold text-forest"><ArrowLeft size={18}/> Selesai untuk hari ini</button><div className="flex shrink-0 items-center gap-2"><button type="button" onClick={advanceDemo} className="flex min-h-11 items-center rounded-2xl bg-sage px-3 text-xs font-bold text-forest transition-[transform,background-color] hover:bg-[#c9dec9] active:scale-[0.96]">Demo: {phase === 'rabt' ? 'selesai' : 'lanjut'}</button><span className="rounded-full bg-peach px-3 py-1.5 text-xs font-bold text-terracotta">5 MENIT BERSAMA</span></div></header><section className="glass-card mt-5 w-full overflow-hidden lg:mt-8"><div className="bg-forest px-5 py-6 text-white lg:px-10 lg:py-8"><p className="text-sm font-semibold text-white/70">QS. {item?.name} · {rangeLabel(target.startAyah, target.endAyah)}</p><div className="mt-2 flex flex-wrap items-end justify-between gap-3"><h1 className="font-display text-3xl lg:text-4xl">{phaseLabel}</h1><span className="rounded-full bg-white/15 px-3 py-1.5 text-sm font-bold tabular-nums">{phase === 'rabt' ? rabtStep?.type === 'bridge' ? `Sambungan ${rabtStep.fromBlock + 1} → ${rabtStep.toBlock + 1}` : `Blok ${(rabtStep?.blockIndex || 0) + 1}/${Math.ceil((rabtEndAyah - rabtStartAyah + 1) / RABT_BLOCK_SIZE)}` : `Ayat ${activeAyah}/${target.endAyah}`}</span></div><div className="mt-6 grid grid-cols-3 gap-2 text-center text-xs font-bold"><span className={phase === 'talaqqi' ? 'text-peach' : 'text-white/60'}>1. Dengarkan</span><span className={phase === 'tikrar' ? 'text-peach' : 'text-white/60'}>2. Ikuti</span><span className={phase === 'rabt' ? 'text-peach' : 'text-white/60'}>3. Sambungkan</span></div></div><div className="p-5 lg:p-10">{loadError ? <p role="alert" className="rounded-2xl bg-[#fff2df] p-4 text-sm text-terracotta">{loadError}</p> : <><div className={`practice-ayah-panel ${phase === 'rabt' ? 'practice-ayah-panel-scroll' : ''}`}><p className="font-serif text-right text-4xl leading-[2.1] text-terracotta lg:text-6xl" dir="rtl">{isLoading ? 'Memuat ayat…' : phase === 'rabt' ? rangeVerses.map((ayah) => <span key={ayah.number} className="block">{ayah.text} <small className="mr-2 font-sans text-base font-bold text-slate-400">{ayah.number}</small></span>) : currentVerse?.text}</p></div><p className="mt-3 text-center text-xs font-bold uppercase tracking-[0.16em] text-slate-400">{phase === 'rabt' ? rangeLabel(rabtDisplayStart, rabtDisplayEnd) : `Ayat ${activeAyah}`}</p></>}{audioError && <p role="alert" className="mx-auto mt-5 max-w-2xl rounded-2xl bg-[#fff2df] p-4 text-sm font-semibold text-terracotta">{audioError}</p>}{phase === 'talaqqi' && <div className="mx-auto mt-8 max-w-2xl"><p className="step-label bg-sage text-forest">LANGKAH 1 · DENGARKAN</p><h2 className="font-display mt-3 text-3xl text-forest">Dengarkan ayat ini {talaqqiTarget}×</h2><p className="mt-2 text-sm leading-relaxed text-slate-600">Audio ayat akan diputar otomatis sebanyak {talaqqiTarget} kali, lalu dilanjutkan ke Tikrar.</p><button type="button" disabled={isLoading || isPlaying} onClick={playTalaqqi} className="primary-button mt-6 disabled:cursor-not-allowed disabled:opacity-50"><Volume2 size={20}/>{isPlaying ? `Memutar ${talaqqiPlayCount}/${talaqqiTarget}×…` : `Putar ayat ${activeAyah} ${talaqqiTarget}×`}</button></div>}{phase === 'tikrar' && <div className="mx-auto mt-8 max-w-2xl"><p className="step-label bg-sage text-forest">LANGKAH 2 · IKUTI</p><h2 className="font-display mt-3 text-3xl text-forest">Ulangi bersama {tikrarTarget}×</h2><p className="mt-2 text-sm leading-relaxed text-slate-600">Orang tua membacakan perlahan, lalu anak menirukan. Ketuk tombol setelah satu kali selesai didengar.</p><TikrarFruitCounter count={tikrarCount} target={tikrarTarget}/><div className="tikrar-fruit-controls" role="group" aria-label="Atur jumlah buah yang dipetik"><button type="button" disabled={tikrarCount === 0} onClick={removeTikrar} aria-label="Kurangi satu buah" className="tikrar-fruit-control disabled:cursor-not-allowed disabled:opacity-45"><span aria-hidden="true">−</span></button><button type="button" disabled={tikrarCount >= tikrarTarget} onClick={addTikrar} aria-label="Tambah satu buah" className="tikrar-fruit-control tikrar-fruit-control-add disabled:cursor-not-allowed disabled:opacity-45"><Plus size={22}/></button></div></div>}{phase === 'rabt' && <div className="mx-auto mt-8 max-w-2xl"><p className="step-label bg-sage text-forest">{rabtScope === 'surah' ? 'RABT SURAT' : 'LANGKAH 3 · SAMBUNGKAN'}</p><h2 className="font-display mt-3 text-3xl text-forest">{rabtTitle}</h2><p className="mt-2 text-sm leading-relaxed text-slate-600">{rabtHelper}</p><button type="button" disabled={isLoading || isPlaying} onClick={playRabtRange} className="secondary-button mt-6 w-full disabled:cursor-not-allowed disabled:opacity-45"><Volume2 size={18}/>{isPlaying ? `Memutar ayat ${rangeAudioAyah}…` : `Putar contoh ${rangeLabel(rabtDisplayStart, rabtDisplayEnd)}`}</button><div className="mt-5"><p className="rounded-2xl bg-[#eff6eb] p-4 text-center text-sm font-bold text-forest">{rabtStep?.type === 'bridge' ? 'Beri waktu anak menemukan sambungannya, lalu lanjutkan bersama.' : 'Bagaimana kelancaran hafalan hari ini?'}</p><button type="button" onClick={retryRabt} className="secondary-button mt-3 w-full !border-peach !text-terracotta"><RotateCcw size={18}/> Ulangi bagian ini</button></div></div>}<nav className="practice-phase-navigation" aria-label="Navigasi langkah hafalan"><button type="button" onClick={goPrevious} className="secondary-button"><ArrowLeft size={18}/>{previousLabel}</button><button type="button" disabled={nextDisabled} onClick={goNext} className="primary-button disabled:cursor-not-allowed disabled:opacity-45">{nextLabel}<ArrowRight size={18}/></button></nav></div></section></div></main>
 }
 
 function LegacyTargetCard({ target, onStart, onComplete, onDelete }) {
@@ -762,7 +915,31 @@ function TargetCard({ target, onStart, onComplete, onDelete }) {
   const item = surahFor(target.surahId)
   const isNew = target.type === 'new'
   const isDone = target.status === 'done'
-  return <article className={`target-card ${isDone ? 'target-card-done' : ''}`}><div className="flex items-start gap-3"><span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl ${isNew ? 'bg-peach text-terracotta' : 'bg-sage text-forest'}`}>{isNew ? <Sparkles size={20}/> : <RotateCcw size={20}/>}</span><div className="min-w-0 flex-1"><div className="flex flex-wrap items-center gap-2"><span className="text-xs font-bold uppercase tracking-[0.12em] text-slate-400">{isNew ? 'Hafalan Baru' : 'Murojaah'}</span>{isDone && <span className="status-pill"><CircleCheck size={13}/> Selesai</span>}</div><h3 className="mt-1 font-display text-xl text-forest">{item?.name || 'Surat'} <span className="font-sans text-sm font-semibold text-slate-400">· {rangeLabel(target.startAyah, target.endAyah)}</span></h3><p className="mt-1 text-sm text-slate-500">{isNew ? 'Satu ayat demi satu ayat, dalam sesi lima menit yang hangat.' : 'Ajak anak menyambungkan ayat dengan pelan-pelan.'}</p></div><button type="button" onClick={() => onDelete(target.id)} aria-label="Hapus target" className="text-slate-300 transition-colors hover:text-terracotta"><Trash2 size={17}/></button></div>{!isDone && <div className="mt-4 flex gap-2">{isNew ? <button type="button" onClick={() => onStart(target)} className="primary-button">Mulai hafalan <Play size={16} fill="currentColor"/></button> : <><button type="button" onClick={() => onStart(target)} className="secondary-button">Mulai <Play size={16} fill="currentColor"/></button><button type="button" onClick={() => onComplete(target)} className="primary-button">Tandai selesai <Check size={16}/></button></>}</div>}{isDone && <div className="mt-4 flex w-full items-center gap-2 rounded-2xl bg-[#eff6eb] px-4 py-3 text-sm font-bold text-forest"><Check size={17}/> Target hari ini selesai. Terima kasih sudah menemani.</div>}</article>
+  const typeLabel = isNew ? 'Hafalan Baru' : 'Murojaah'
+  return <article className={`target-card ${isDone ? 'target-card-done' : ''}`}><div className="flex items-start gap-3"><span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl ${isNew ? 'bg-peach text-terracotta' : 'bg-sage text-forest'}`}>{isNew ? <Sparkles size={20}/> : <RotateCcw size={20}/>}</span><div className="min-w-0 flex-1"><div className="flex flex-wrap items-center gap-2"><span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-bold uppercase tracking-[0.12em] ${isNew ? 'bg-peach text-terracotta' : 'bg-sage text-forest'}`}>{isNew ? <Sparkles aria-hidden="true" size={12}/> : <RotateCcw aria-hidden="true" size={12}/>} {typeLabel}</span>{isDone && <span className="status-pill"><CircleCheck size={13}/> Selesai</span>}</div><h3 className="mt-2 font-display text-xl text-forest">{item?.name || 'Surat'} <span className="font-sans text-sm font-semibold text-slate-400">· {rangeLabel(target.startAyah, target.endAyah)}</span></h3><p className="mt-1 text-sm text-slate-500">{isNew ? 'Satu ayat demi satu ayat, dalam sesi lima menit yang hangat.' : 'Ajak anak menyambungkan ayat dengan pelan-pelan.'}</p></div><button type="button" onClick={() => onDelete(target.id)} aria-label="Hapus target" className="text-slate-300 transition-colors hover:text-terracotta"><Trash2 size={17}/></button></div>{!isDone && <div className="mt-4 flex gap-2">{isNew ? <button type="button" onClick={() => onStart(target)} className="primary-button">Mulai hafalan <Play size={16} fill="currentColor"/></button> : <><button type="button" onClick={() => onStart(target)} className="secondary-button">Mulai <Play size={16} fill="currentColor"/></button><button type="button" onClick={() => onComplete(target)} className="primary-button">Tandai selesai <Check size={16}/></button></>}</div>}{isDone && <div className="mt-4 flex w-full items-center gap-2 rounded-2xl bg-[#eff6eb] px-4 py-3 text-sm font-bold text-forest"><Check size={17}/> Target hari ini selesai. Terima kasih sudah menemani.</div>}</article>
+}
+
+function TargetGroup({ type, targets, onStart, onComplete, onDelete }) {
+  const isNew = type === 'new'
+  const title = isNew ? 'Hafalan Baru' : 'Murojaah'
+  const groupId = `target-group-${type}`
+  return <section aria-labelledby={groupId}>
+    <div className="flex items-center justify-between gap-3">
+      <h3 id={groupId} className={`inline-flex items-center gap-2 text-sm font-bold ${isNew ? 'text-terracotta' : 'text-forest'}`}>{isNew ? <Sparkles size={16}/> : <RotateCcw size={16}/>} {title}</h3>
+      <span className={`rounded-full px-2.5 py-1 text-xs font-bold tabular-nums ${isNew ? 'bg-peach text-terracotta' : 'bg-sage text-forest'}`}>{targets.length} target</span>
+    </div>
+    <div className="mt-3 space-y-3">{targets.map((target) => <TargetCard key={target.id} target={target} onStart={onStart} onComplete={onComplete} onDelete={onDelete}/>)}</div>
+  </section>
+}
+
+function ReviewRecommendations({ memories, onStart, onAdd }) {
+  return <section aria-labelledby="review-recommendations-title" className="rounded-[24px] bg-[#eff6eb] p-4 sm:p-5">
+    <div className="flex items-start justify-between gap-3"><div><p className="step-label bg-white text-forest">PILIHAN HARI INI</p><h3 id="review-recommendations-title" className="font-display mt-2 text-xl text-forest">Murojaah yang perlu ditemani</h3><p className="mt-1 text-sm leading-relaxed text-slate-600">Pilih satu atau dua rentang pendek saja. Tidak dikerjakan hari ini tetap boleh.</p></div><RotateCcw className="mt-1 shrink-0 text-forest" size={22}/></div>
+    <div className="mt-4 space-y-3">{memories.map((memory) => {
+      const item = surahFor(memory.surahId)
+      return <article key={memory.id} className="rounded-2xl bg-white p-4 shadow-sm"><div className="flex items-start justify-between gap-3"><div><h4 className="font-bold text-forest">{item?.name || 'Surat'} <span className="text-sm font-semibold text-slate-400">· {rangeLabel(memory.startAyah, memory.endAyah)}</span></h4><p className="mt-1 text-xs font-bold text-terracotta">{dueLabel(memory)}</p></div><Sparkles className="shrink-0 text-terracotta" size={17}/></div><div className="mt-3 flex gap-2"><button type="button" onClick={() => onStart(memory)} className="secondary-button min-h-10 text-sm">Mulai <Play size={15} fill="currentColor"/></button><button type="button" onClick={() => onAdd(memory)} className="min-h-10 rounded-xl bg-forest px-3 text-sm font-bold text-white transition-transform active:scale-[0.96]">Tambahkan</button></div></article>
+    })}</div>
+  </section>
 }
 
 const sortLearningQueue = (first, second) => {
@@ -771,14 +948,14 @@ const sortLearningQueue = (first, second) => {
 }
 
 function localCoachAdvice({ profile, targets, memories, conditions, listenRepeats }) {
-  const todayTargets = targets.filter((target) => target.createdAt?.slice(0, 10) === todayKey())
+  const todayTargets = targets.filter((target) => isCreatedToday(target.createdAt, todayKey()))
   const remaining = todayTargets.filter((target) => target.status !== 'done').sort(sortLearningQueue)
-  const due = memories.filter((memory) => !memory.nextReviewAt || memory.nextReviewAt <= todayKey()).sort(sortLearningQueue)
+  const due = getReviewRecommendations(memories, { today: todayKey(), limit: memories.length })
   const child = profile.name || 'si kecil'
   const lowEnergy = conditions.includes('tidak-mood') || conditions.includes('lelah')
-  if (conditions.includes('tantrum')) return { title: 'Tenangkan hati dulu', body: `Saat ${child} tantrum, tidak ada target yang perlu dikejar. Jauhkan dulu sesi hafalan, peluk atau temani dengan tenang, lalu kembali ke Al-Qur’an saat suasana sudah aman. Hari ini, kasih sayang Ayah/Bunda adalah pelajaran yang cukup.`, action: null, kind: 'pause' }
+  if (conditions.includes('tantrum')) return { title: 'Tenangkan hati dulu', body: `Saat ${child} tantrum, tidak ada target yang perlu dikejar. Jauhkan dulu sesi hafalan, peluk atau temani dengan tenang, lalu kembali ke Al-Qur’an saat suasana sudah aman. Hari ini, kasih sayang Ayah/Bunda adalah pelajaran yang cukup.`, action: 'Pilih jeda hari ini', kind: 'pause' }
   if (conditions.includes('ingin-main')) return { title: 'Biarkan bermain sambil ditemani Qur’an', body: `${child} ingin bermain, jadi tidak perlu diajak murojaah sekarang. Putar murattal dengan volume lembut sebagai teman bermain; kedekatan dengan Al-Qur’an tetap tumbuh tanpa terasa seperti tugas.`, action: 'Dengarkan Qur’an', kind: 'listen' }
-  if (lowEnergy) return { title: 'Istirahat juga bagian dari belajar', body: `${child} tampak tidak siap belajar. Jangan ajak murojaah dulu; pilih jeda, pelukan, atau aktivitas tenang. Hafalan bisa dilanjutkan saat tubuh dan hati sudah lebih siap.`, action: null, kind: 'pause' }
+  if (lowEnergy) return { title: 'Istirahat juga bagian dari belajar', body: `${child} tampak tidak siap belajar. Jangan ajak murojaah dulu; pilih jeda, pelukan, atau aktivitas tenang. Hafalan bisa dilanjutkan saat tubuh dan hati sudah lebih siap.`, action: 'Pilih jeda hari ini', kind: 'pause' }
   if (!todayTargets.length && due.length) {
     const item = surahFor(due[0].surahId)
     return { title: `Mulai dari murojaah ${item?.name || 'yang sudah dihafal'}`, body: `${child} punya ${due.length} hafalan yang siap diulang. Pilih satu rentang pendek saja, lalu dengarkan dan sambungkan perlahan.`, action: 'Tambah murojaah', kind: 'review', memory: due[0] }
@@ -801,12 +978,81 @@ function localCoachAdvice({ profile, targets, memories, conditions, listenRepeat
     const known = new Set([...(profile.memorized || []), ...memories.map((memory) => memory.surahId)])
     const nextSurah = onboardingSurahs.find((surah) => !known.has(surah.id)) || onboardingSurahs[0]
     const reviewMemory = due[0] || memories.slice().sort(sortLearningQueue)[0]
-    if (conditions.includes('siap')) return { title: 'MasyaAllah, hebat sekali hari ini!', body: `Target sudah selesai dan ${child} masih siap belajar. Pilih satu kegiatan ringan saja—murojaah, hafalan baru, atau dengarkan Qur’an—agar sesi tetap menyenangkan.`, kind: 'done', options: [...(reviewMemory ? [{ label: 'Murojaah', kind: 'review', memory: reviewMemory }] : []), { label: 'Hafalan baru', kind: 'new', surahId: nextSurah.id }, { label: 'Dengar Qur’an', kind: 'listen' }] }
-    return { title: 'Tutup dengan apresiasi hangat', body: `Semua target hari ini sudah selesai. Ucapkan “MasyaAllah, terima kasih sudah berusaha,” lalu istirahatkan hafalan sampai besok.`, action: null, kind: 'done' }
+    if (conditions.includes('siap')) {
+      if (reviewMemory) return { title: 'MasyaAllah, hebat sekali hari ini!', body: `Target hari ini selesai dan ${child} masih siap. Cukup satu kegiatan ringan lagi: murojaah ${rangeLabel(reviewMemory.startAyah, reviewMemory.endAyah)} dengan pelan.`, action: 'Tambah murojaah ringan', kind: 'review', memory: reviewMemory }
+      return { title: 'MasyaAllah, hebat sekali hari ini!', body: `Target hari ini selesai dan ${child} masih siap. Jika ingin melanjutkan, cukup satu target pendek agar sesi tetap menyenangkan.`, action: `Buat target ${nextSurah.name}`, kind: 'new', surahId: nextSurah.id }
+    }
+    return { title: 'Tutup dengan apresiasi hangat', body: `Semua target hari ini sudah selesai. Ucapkan “MasyaAllah, terima kasih sudah berusaha,” lalu istirahatkan hafalan sampai besok.`, action: 'Tutup sesi dengan tenang', kind: 'pause' }
   }
   const next = remaining[0]
   const item = surahFor(next.surahId)
   return { title: `Fokus pada ${item?.name || 'satu target'} dulu`, body: `${remaining.length} target masih menunggu. Mulai dari ${rangeLabel(next.startAyah, next.endAyah)}; rentang ini didahulukan sebelum bagian berikutnya. Putar bacaan qari ${listenRepeats}× dengan tempo pelan, lalu beri pujian pada setiap usaha.`, action: `Mulai & putar ${listenRepeats}×`, kind: 'start', target: next, repeat: listenRepeats }
+}
+
+function checkinFollowUp(checkin, profile) {
+  if (!checkin || checkin.actionStatus === 'suggested') return null
+  const child = profile.name || 'si kecil'
+  if (checkin.actionStatus === 'completed') return `MasyaAllah, ${child} sudah menutup langkah kecil hari ini. Simpan rasa senangnya, besok kita lanjut pelan-pelan lagi.`
+  if (checkin.actionStatus === 'paused') return `Tadi kita memilih jeda untuk ${child}. Tidak apa-apa—rasa aman selalu lebih dulu daripada target.`
+  return `Langkah kecil untuk ${child} sudah dipilih. Saat kembali, lanjutkan saja dari satu ayat dan satu pujian.`
+}
+
+function DailyCheckinCard({ profile, targets, memories, checkin, onSave, onAdd, onStart }) {
+  const [isLoading, setIsLoading] = useState(false)
+  const [aiStatus, setAiStatus] = useState('')
+  const conditions = checkin?.conditions || []
+  const listenRepeats = checkin?.listenRepeats || 3
+  const advice = localCoachAdvice({ profile, targets, memories, conditions, listenRepeats })
+  const personalAdvice = isPersonalAdvice(checkin?.personalAdvice) && checkin.personalAdvice.recommendedAction.type === advice.kind ? checkin.personalAdvice : null
+  const message = personalAdvice?.message || checkinFollowUp(checkin, profile) || advice.body
+  const recommendation = { title: advice.title, actionType: advice.kind }
+  const saveContext = (patch, actionStatus = 'suggested') => onSave({ ...patch, recommendation, actionStatus, personalAdvice: null })
+  const toggleCondition = (condition) => {
+    setAiStatus('')
+    const nextConditions = conditions.includes(condition) ? conditions.filter((item) => item !== condition) : [...conditions, condition]
+    const nextAdvice = localCoachAdvice({ profile, targets, memories, conditions: nextConditions, listenRepeats })
+    onSave({ conditions: nextConditions, recommendation: { title: nextAdvice.title, actionType: nextAdvice.kind }, actionStatus: 'suggested', personalAdvice: null })
+  }
+  const getPersonalAdvice = async () => {
+    setIsLoading(true)
+    try {
+      const response = await fetch('/api/daily-coach', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          profile: { name: profile.name, age: profile.age }, targets, memories, conditions, listenRepeats, today: todayKey(),
+          checkin: { actionStatus: checkin?.actionStatus, previousAction: checkin?.recommendation?.actionType },
+          localRecommendation: recommendation,
+        }),
+      })
+      const payload = await response.json()
+      if (!response.ok || !isPersonalAdvice(payload.advice) || payload.advice.recommendedAction.type !== advice.kind) throw new Error(payload.error)
+      onSave({ recommendation, personalAdvice: payload.advice, actionStatus: checkin?.actionStatus || 'suggested' })
+      setAiStatus('Saran personal sudah diperbarui untuk check-in hari ini.')
+    } catch {
+      onSave({ recommendation, actionStatus: checkin?.actionStatus || 'suggested', personalAdvice: null })
+      setAiStatus('Saran personal belum tersedia; rekomendasi lokal tetap siap dipakai.')
+    } finally { setIsLoading(false) }
+  }
+  const takeAction = () => {
+    const nextStatus = advice.kind === 'pause' ? 'paused' : 'acted'
+    saveContext({ actionTaken: advice.kind }, nextStatus)
+    if (advice.kind === 'new') onAdd({ surahId: advice.surahId })
+    if (advice.kind === 'review' && advice.memory) onAdd({ memory: advice.memory })
+    if (advice.kind === 'start' && advice.target) {
+      sessionStorage.setItem('wali-tahfiz-coach-repeat', String(advice.repeat || listenRepeats))
+      onStart(advice.target)
+    }
+    if (advice.kind === 'listen') window.dispatchEvent(new Event('wali-tahfiz-open-audio'))
+  }
+  return <section className="daily-checkin" aria-labelledby="daily-checkin-title">
+    <div className="daily-checkin-heading"><span className="daily-checkin-icon"><Bot size={22}/></span><div className="min-w-0 flex-1"><p className="text-xs font-bold uppercase tracking-[.13em] text-terracotta">TEMAN HAFALAN HARI INI</p><h2 id="daily-checkin-title" className="font-display mt-1 text-2xl text-forest">Bagaimana suasana {profile.name}?</h2></div><span className="daily-checkin-status">{checkin?.actionStatus === 'completed' ? 'Sudah ditemani' : 'Satu langkah kecil'}</span></div>
+    <div className="mt-4"><p className="text-xs font-bold uppercase tracking-[.12em] text-slate-400">Kondisi sekarang</p><div className="mt-2 flex flex-wrap gap-2">{[['tantrum', 'Tantrum'], ['tidak-mood', 'Tidak mood'], ['ingin-main', 'Mau main'], ['lelah', 'Lelah'], ['siap', 'Siap belajar']].map(([value, label]) => <button type="button" key={value} aria-pressed={conditions.includes(value)} onClick={() => toggleCondition(value)} className={`min-h-11 rounded-full px-3.5 text-sm font-bold transition-[transform,background-color,color] active:scale-[0.96] ${conditions.includes(value) ? 'bg-terracotta text-white' : 'bg-white text-forest shadow-sm'}`}>{label}</button>)}</div></div>
+    {advice.kind === 'start' && <div className="mt-4"><p className="text-xs font-bold uppercase tracking-[.12em] text-slate-400">Putar bacaan qari</p><div className="mt-2 flex gap-2">{[1, 3, 5].map((count) => <button type="button" key={count} onClick={() => saveContext({ listenRepeats: count })} aria-pressed={listenRepeats === count} className={`flex min-h-11 min-w-11 items-center justify-center rounded-xl text-sm font-bold tabular-nums transition-[transform,background-color,color] active:scale-[0.96] ${listenRepeats === count ? 'bg-forest text-white shadow-sm' : 'bg-white text-forest shadow-sm'}`}>{count}×</button>)}</div></div>}
+    <div className="daily-checkin-message"><h3 className="font-display text-xl text-forest">{personalAdvice?.title || advice.title}</h3><p className="mt-1.5 text-sm leading-relaxed text-slate-600">{message}</p></div>
+    <div className="mt-4 flex flex-col gap-2 sm:flex-row"><button type="button" onClick={takeAction} className="daily-checkin-action">{advice.action}{advice.kind !== 'pause' && <Play size={15} fill="currentColor"/>}</button><button type="button" disabled={isLoading} onClick={getPersonalAdvice} className="daily-checkin-ai disabled:opacity-60">{isLoading ? 'Merangkai…' : <><Sparkles size={16}/> Rangkai saran personal</>}</button></div>
+    {aiStatus && <p className="mt-3 text-xs font-semibold text-forest" role="status">{aiStatus}</p>}
+  </section>
 }
 
 function FloatingCoach({ profile, targets, memories, onAdd, onStart }) {
@@ -823,7 +1069,7 @@ function FloatingCoach({ profile, targets, memories, onAdd, onStart }) {
       const response = await fetch('/api/daily-coach', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ profile: { name: profile.name, age: profile.age }, targets, memories, conditions, listenRepeats, today: todayKey() }) })
       const payload = await response.json()
       if (!response.ok) throw new Error(payload.error)
-      setAiAdvice(payload.advice)
+      setAiAdvice(payload.advice?.message || '')
     } catch {
       setAiAdvice('Hari yang berat tetap boleh berjalan pelan. Bila anak rewel atau tidak mood, tutup sesi dengan lembut, peluk dulu, lalu coba lagi di waktu lain. Kedekatan dengan Al-Qur’an tumbuh dari rasa aman, bukan tekanan.')
     } finally { setIsLoading(false) }
@@ -884,10 +1130,10 @@ function LegacyHome({ profile, settings, audioLibrary, openPractice, openReview 
     })
     return () => { active = false }
   }, [])
-  const todayTargets = targets.filter((target) => target.createdAt?.slice(0, 10) === todayKey())
+  const todayTargets = targets.filter((target) => isCreatedToday(target.createdAt, todayKey()))
   const done = todayTargets.filter((target) => target.status === 'done').length
-  const updateMemory = (memoryId, result) => setMemories((items) => items.map((memory) => { if (memory.id !== memoryId) return memory; const intervalIndex = result === 'pass' ? Math.min(memory.intervalIndex + 1, SPACED_INTERVALS.length - 1) : 0; const updated = { ...memory, intervalIndex, lastReviewedAt: todayKey(), nextReviewAt: addDays(new Date(), SPACED_INTERVALS[intervalIndex]) }; db.memories.put(updated); return updated }))
-  const completeTarget = (target) => { const completed = { ...target, status: 'done' }; setTargets((items) => items.map((item) => item.id === target.id ? completed : item)); db.targets.put(completed); if (target.type === 'new') setMemories((items) => { if (items.some((memory) => memory.surahId === target.surahId && memory.startAyah === target.startAyah && memory.endAyah === target.endAyah)) return items; const memory = { id: makeId('memory'), surahId: target.surahId, startAyah: target.startAyah, endAyah: target.endAyah, intervalIndex: 0, lastReviewedAt: null, nextReviewAt: null }; db.memories.put(memory); return [...items, memory] }); else if (target.memoryId) updateMemory(target.memoryId, 'pass') }
+  const updateMemory = (memoryId, result) => setMemories((items) => items.map((memory) => { if (memory.id !== memoryId) return memory; const updated = scheduleReviewResult(memory, result, todayKey()); db.memories.put(updated); return updated }))
+  const completeTarget = (target) => { const completed = { ...target, status: 'done' }; setTargets((items) => items.map((item) => item.id === target.id ? completed : item)); db.targets.put(completed); if (target.type === 'new') setMemories((items) => { if (items.some((memory) => memory.surahId === target.surahId && memory.startAyah === target.startAyah && memory.endAyah === target.endAyah)) return items; const memory = createScheduledMemory({ id: makeId('memory'), surahId: target.surahId, startAyah: target.startAyah, endAyah: target.endAyah }, todayKey()); db.memories.put(memory); return [...items, memory] }); else if (target.memoryId) updateMemory(target.memoryId, 'pass') }
   const saveTarget = (target) => { setTargets((items) => [target, ...items]); db.targets.put(target); setShowAdd(false); setSuggestedSurahId('1') }
   const deleteTarget = (id) => { setTargets((items) => items.filter((target) => target.id !== id)); db.targets.delete(id) }
   const setStartedTarget = (id, coachRepeat) => { const target = targets.find((item) => item.id === id); const savedRepeat = Number(sessionStorage.getItem('wali-tahfiz-coach-repeat')); sessionStorage.removeItem('wali-tahfiz-coach-repeat'); if (target) openPractice({ ...target, coachRepeat: coachRepeat || savedRepeat || undefined }) }
@@ -899,6 +1145,7 @@ function LegacyHome({ profile, settings, audioLibrary, openPractice, openReview 
 function Home({ profile, family, onSelectChild, settings, audioLibrary, openPractice, openReview }) {
   const [targets, setTargets] = useState([])
   const [memories, setMemories] = useState([])
+  const [checkin, setCheckin] = useState(null)
   const [isHydrated, setIsHydrated] = useState(false)
   const [showAdd, setShowAdd] = useState(false)
   const [suggestedSurahId, setSuggestedSurahId] = useState('1')
@@ -906,7 +1153,7 @@ function Home({ profile, family, onSelectChild, settings, audioLibrary, openPrac
   useEffect(() => {
     let active = true
     setIsHydrated(false)
-    Promise.all([db.targets.where('childId').equals(profile.id).toArray(), db.memories.where('childId').equals(profile.id).toArray()]).then(([savedTargets, savedMemories]) => {
+    Promise.all([db.targets.where('childId').equals(profile.id).toArray(), db.memories.where('childId').equals(profile.id).toArray(), db.coachCheckins.where('[childId+date]').equals([profile.id, todayKey()]).first()]).then(([savedTargets, savedMemories, savedCheckin]) => {
       if (!active) return
       const orderedTargets = savedTargets.sort((first, second) => String(second.createdAt || '').localeCompare(String(first.createdAt || '')))
       setTargets(orderedTargets)
@@ -919,16 +1166,31 @@ function Home({ profile, family, onSelectChild, settings, audioLibrary, openPrac
         setMemories(initialMemories)
         db.memories.bulkPut(initialMemories)
       }
+      setCheckin(savedCheckin || null)
       setIsHydrated(true)
     })
     return () => { active = false }
   }, [profile.id])
-  const todayTargets = targets.filter((target) => target.createdAt?.slice(0, 10) === todayKey())
+  const todayTargets = targets.filter((target) => isCreatedToday(target.createdAt, todayKey()))
   const done = todayTargets.filter((target) => target.status === 'done').length
+  const newTargets = todayTargets.filter((target) => target.type === 'new')
+  const reviewTargets = todayTargets.filter((target) => target.type === 'review')
+  const reviewRecommendations = getReviewRecommendations(memories, {
+    today: todayKey(),
+    excludedMemoryIds: reviewTargets.map((target) => target.memoryId),
+  })
+  const saveCheckin = (patch) => {
+    const now = new Date().toISOString()
+    setCheckin((current) => {
+      const base = current || createCoachCheckin({ childId: profile.id, date: todayKey(), now, recommendation: patch.recommendation || null })
+      const next = { ...base, ...patch, childId: profile.id, date: todayKey(), updatedAt: now }
+      db.coachCheckins.put(next)
+      return next
+    })
+  }
   const updateMemory = (memoryId, result) => setMemories((items) => items.map((memory) => {
     if (memory.id !== memoryId) return memory
-    const intervalIndex = result === 'pass' ? Math.min(memory.intervalIndex + 1, SPACED_INTERVALS.length - 1) : 0
-    const updated = { ...memory, intervalIndex, lastReviewedAt: todayKey(), nextReviewAt: addDays(new Date(), SPACED_INTERVALS[intervalIndex]) }
+    const updated = scheduleReviewResult(memory, result, todayKey())
     db.memories.put(updated)
     return updated
   }))
@@ -938,11 +1200,12 @@ function Home({ profile, family, onSelectChild, settings, audioLibrary, openPrac
     db.targets.put(completed)
     if (target.type === 'new') setMemories((items) => {
       if (items.some((memory) => memory.surahId === target.surahId && memory.startAyah === target.startAyah && memory.endAyah === target.endAyah)) return items
-      const memory = { id: makeId('memory'), childId: profile.id, surahId: target.surahId, startAyah: target.startAyah, endAyah: target.endAyah, intervalIndex: 0, lastReviewedAt: null, nextReviewAt: null }
+      const memory = createScheduledMemory({ id: makeId('memory'), childId: profile.id, surahId: target.surahId, startAyah: target.startAyah, endAyah: target.endAyah }, todayKey())
       db.memories.put(memory)
       return [...items, memory]
     })
     else if (target.memoryId) updateMemory(target.memoryId, 'pass')
+    completeTodayCoachAction(profile.id)
   }
   const saveTarget = (target) => {
     const scopedTarget = { ...target, childId: profile.id }
@@ -958,9 +1221,23 @@ function Home({ profile, family, onSelectChild, settings, audioLibrary, openPrac
     sessionStorage.removeItem('wali-tahfiz-coach-repeat')
     if (target) openPractice({ ...target, coachRepeat: coachRepeat || savedRepeat || undefined })
   }
-  const addReviewTarget = (memory) => saveTarget({ id: makeId('target'), type: 'review', surahId: memory.surahId, startAyah: memory.startAyah, endAyah: memory.endAyah, status: 'todo', createdAt: new Date().toISOString(), memoryId: memory.id })
+  const addReviewTarget = (memory) => {
+    if (hasReviewTargetForToday(targets, memory.id, todayKey())) return
+    saveTarget({ id: makeId('target'), type: 'review', surahId: memory.surahId, startAyah: memory.startAyah, endAyah: memory.endAyah, status: 'todo', createdAt: new Date().toISOString(), memoryId: memory.id })
+  }
   if (!isHydrated) return <main className="flex min-h-screen items-center justify-center bg-cream"><p className="font-display text-xl text-forest">Memuat data hafalan {profile.name}…</p></main>
-  return <main className="min-h-screen bg-cream pb-12"><div className="mx-auto max-w-6xl px-4 pt-6 sm:px-6 lg:px-8 lg:pt-10"><header className="relative overflow-visible rounded-[30px] bg-forest px-6 py-7 text-white shadow-soft lg:px-10 lg:py-9"><div className="pointer-events-none absolute -right-10 -top-14 h-44 w-44 rounded-full bg-white/10"/><div className="relative flex items-start justify-between gap-4"><div className="min-w-0"><p className="flex items-center gap-1.5 text-sm font-semibold text-white/75"><Sparkles size={15}/> Assalamu'alaikum, {profile.role}!</p><h1 className="font-display mt-1 text-3xl lg:text-4xl">Hari hafalan · {profile.name}</h1><p className="mt-2 text-sm text-white/70">Sedikit demi sedikit, dengan hati yang gembira.</p></div><div className="flex shrink-0 items-start gap-2"><ChildSwitcher family={family} onSelect={onSelectChild} onManage={settings}/><button type="button" onClick={settings} aria-label="Pengaturan" className="icon-button bg-white/15 text-white"><Settings size={21}/></button></div></div></header><div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4"><div className="stat-card"><CalendarDays size={18} className="text-terracotta"/><span><b>{todayTargets.length}</b><small>Target hari ini</small></span></div><div className="stat-card"><CircleCheck size={18} className="text-forest"/><span><b>{done}</b><small>Sudah selesai</small></span></div><div className="stat-card"><Sparkles size={18} className="text-terracotta"/><span><b>{todayTargets.filter((target) => target.type === 'new').length}</b><small>Hafalan baru</small></span></div><div className="stat-card"><RotateCcw size={18} className="text-forest"/><span><b>{todayTargets.filter((target) => target.type === 'review').length}</b><small>Murojaah</small></span></div></div><div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-start"><section className="glass-card p-5 lg:p-7"><div className="flex items-end justify-between gap-4"><div><p className="step-label bg-sage text-forest">AGENDA HARI INI</p><h2 className="font-display mt-2 text-2xl text-forest">Target {profile.name}</h2><p className="mt-1 text-sm text-slate-500">Pilih satu saja dulu. Kehadiran Ayah/Bunda sudah berarti.</p></div><button type="button" onClick={() => setShowAdd(true)} className="flex min-h-11 shrink-0 items-center gap-1.5 rounded-2xl bg-terracotta px-3 py-2 text-sm font-bold text-white transition-transform active:scale-[0.96]"><Plus size={17}/> Tambah</button></div><div className="mt-5 space-y-3">{todayTargets.length ? todayTargets.map((target) => <TargetCard key={target.id} target={target} onStart={(item) => item.type === 'review' ? openReview(memories.find((memory) => memory.id === item.memoryId)) : setStartedTarget(item.id)} onComplete={completeTarget} onDelete={deleteTarget}/>) : <div className="rounded-[24px] bg-[#f7faf4] px-5 py-10 text-center"><span className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-white text-forest"><Plus size={22}/></span><h3 className="mt-3 font-display text-xl text-forest">Belum ada target hari ini</h3><p className="mt-1 text-sm text-slate-500">Tambahkan hafalan baru atau pilih materi untuk murojaah.</p><button type="button" onClick={() => setShowAdd(true)} className="mt-4 min-h-11 font-bold text-terracotta">+ Tambah target pertama</button></div>}</div></section><aside className="glass-card p-5 lg:p-6"><div className="flex items-start justify-between"><div><p className="step-label bg-peach text-terracotta">INGATAN HAFALAN</p><h2 className="font-display mt-2 text-2xl text-forest">Hafalan {profile.name}</h2></div><Clock3 className="text-terracotta" size={22}/></div><p className="mt-1 text-sm leading-relaxed text-slate-500">Murojaah akan muncul lagi sesuai jarak latihan.</p><div className="mt-5 space-y-3">{memories.length ? memories.map((memory) => { const item = surahFor(memory.surahId); return <div key={memory.id} className="memory-card"><div className="flex items-start justify-between gap-2"><div><b className="block text-forest">{item?.name || 'Surat'} · {rangeLabel(memory.startAyah, memory.endAyah)}</b><span className={`mt-1 inline-flex items-center gap-1 text-xs font-bold ${dueLabel(memory) === 'Siap diulang' ? 'text-terracotta' : 'text-slate-500'}`}>{dueLabel(memory) === 'Siap diulang' && <Sparkles size={12}/>} {dueLabel(memory)}</span></div><button type="button" onClick={() => openReview(memory)} aria-label={`Putar acak ${item?.name || 'surat'}`} className="icon-button h-10 w-10 bg-white"><Shuffle size={17}/></button></div><button type="button" onClick={() => addReviewTarget(memory)} className="mt-3 flex min-h-10 w-full items-center justify-center gap-1.5 rounded-xl bg-white text-sm font-bold text-forest transition-transform active:scale-[0.96]"><Plus size={15}/> Tambah ke hari ini</button></div> }) : <p className="rounded-2xl bg-[#f7faf4] p-4 text-sm leading-relaxed text-slate-500">Belum ada hafalan tersimpan untuk {profile.name}. Target Hafalan Baru akan muncul di sini setelah selesai.</p>}</div></aside></div></div><FloatingCoach profile={profile} targets={targets} memories={memories} onAdd={({ memory, surahId } = {}) => { if (memory) addReviewTarget(memory); else { setSuggestedSurahId(surahId || '1'); setShowAdd(true) } }} onStart={(target) => target.type === 'review' ? openReview(memories.find((memory) => memory.id === target.memoryId)) : setStartedTarget(target.id)}/>{showAdd && <AddTargetSheet memories={memories} initialSurahId={suggestedSurahId} onSave={saveTarget} onClose={() => { setShowAdd(false); setSuggestedSurahId('1') }}/>}</main>
+  return <main className="min-h-screen bg-cream pb-12"><div className="mx-auto max-w-6xl px-4 pt-6 sm:px-6 lg:px-8 lg:pt-10">
+    <header className="relative overflow-visible rounded-[30px] bg-forest px-6 py-7 text-white shadow-soft lg:px-10 lg:py-9"><div className="pointer-events-none absolute -right-10 -top-14 h-44 w-44 rounded-full bg-white/10"/><div className="relative flex items-start justify-between gap-4"><div className="min-w-0"><p className="flex items-center gap-1.5 text-sm font-semibold text-white/75"><Sparkles size={15}/> Assalamu'alaikum, {profile.role}!</p><h1 className="font-display mt-1 text-3xl lg:text-4xl">Hari hafalan · {profile.name}</h1><p className="mt-2 text-sm text-white/70">Sedikit demi sedikit, dengan hati yang gembira.</p></div><div className="flex shrink-0 items-start gap-2"><ChildSwitcher family={family} onSelect={onSelectChild} onManage={settings}/><button type="button" onClick={settings} aria-label="Pengaturan" className="icon-button bg-white/15 text-white"><Settings size={21}/></button></div></div></header>
+    <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4"><div className="stat-card"><CalendarDays size={18} className="text-terracotta"/><span><b>{todayTargets.length}</b><small>Target hari ini</small></span></div><div className="stat-card"><CircleCheck size={18} className="text-forest"/><span><b>{done}</b><small>Sudah selesai</small></span></div><div className="stat-card"><Sparkles size={18} className="text-terracotta"/><span><b>{newTargets.length}</b><small>Hafalan baru</small></span></div><div className="stat-card"><RotateCcw size={18} className="text-forest"/><span><b>{reviewTargets.length}</b><small>Murojaah</small></span></div></div>
+    <div className="mt-6"><DailyCheckinCard profile={profile} targets={targets} memories={memories} checkin={checkin} onSave={saveCheckin} onAdd={({ memory, surahId } = {}) => { if (memory) addReviewTarget(memory); else { setSuggestedSurahId(surahId || '1'); setShowAdd(true) } }} onStart={(target) => target.type === 'review' ? openReview(memories.find((memory) => memory.id === target.memoryId)) : setStartedTarget(target.id)}/></div>
+    <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-start"><section className="glass-card p-5 lg:p-7"><div className="flex items-end justify-between gap-4"><div><p className="step-label bg-sage text-forest">AGENDA HARI INI</p><h2 className="font-display mt-2 text-2xl text-forest">Target {profile.name}</h2><p className="mt-1 text-sm text-slate-500">Pilih satu saja dulu. Kehadiran Ayah/Bunda sudah berarti.</p></div><button type="button" onClick={() => setShowAdd(true)} className="flex min-h-11 shrink-0 items-center gap-1.5 rounded-2xl bg-terracotta px-3 py-2 text-sm font-bold text-white transition-transform active:scale-[0.96]"><Plus size={17}/> Tambah</button></div>
+      <div className="mt-5 space-y-6">
+        {reviewRecommendations.length > 0 && (
+          <ReviewRecommendations memories={reviewRecommendations} onStart={openReview} onAdd={addReviewTarget}/>
+        )}
+        {todayTargets.length ? <>{newTargets.length > 0 && <TargetGroup type="new" targets={newTargets} onStart={(item) => item.type === 'review' ? openReview(memories.find((memory) => memory.id === item.memoryId)) : setStartedTarget(item.id)} onComplete={completeTarget} onDelete={deleteTarget}/>} {reviewTargets.length > 0 && <TargetGroup type="review" targets={reviewTargets} onStart={(item) => item.type === 'review' ? openReview(memories.find((memory) => memory.id === item.memoryId)) : setStartedTarget(item.id)} onComplete={completeTarget} onDelete={deleteTarget}/>}</> : reviewRecommendations.length === 0 && <div className="rounded-[24px] bg-[#f7faf4] px-5 py-10 text-center"><span className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-white text-forest"><Plus size={22}/></span><h3 className="mt-3 font-display text-xl text-forest">Belum ada target hari ini</h3><p className="mt-1 text-sm text-slate-500">Tambahkan hafalan baru atau pilih materi untuk murojaah.</p><button type="button" onClick={() => setShowAdd(true)} className="mt-4 min-h-11 font-bold text-terracotta">+ Tambah target pertama</button></div>}
+      </div></section>
+      <aside className="glass-card p-5 lg:p-6"><div className="flex items-start justify-between"><div><p className="step-label bg-peach text-terracotta">INGATAN HAFALAN</p><h2 className="font-display mt-2 text-2xl text-forest">Hafalan {profile.name}</h2></div><Clock3 className="text-terracotta" size={22}/></div><p className="mt-1 text-sm leading-relaxed text-slate-500">Murojaah akan muncul lagi sesuai jarak latihan.</p><div className="mt-5 space-y-3">{memories.length ? memories.map((memory) => { const item = surahFor(memory.surahId); return <div key={memory.id} className="memory-card"><div className="flex items-start justify-between gap-2"><div><b className="block text-forest">{item?.name || 'Surat'} · {rangeLabel(memory.startAyah, memory.endAyah)}</b><span className={`mt-1 inline-flex items-center gap-1 text-xs font-bold ${dueLabel(memory) === 'Siap diulang' ? 'text-terracotta' : 'text-slate-500'}`}>{dueLabel(memory) === 'Siap diulang' && <Sparkles size={12}/>} {dueLabel(memory)}</span></div><button type="button" onClick={() => openReview(memory)} aria-label={`Putar acak ${item?.name || 'surat'}`} className="icon-button h-10 w-10 bg-white"><Shuffle size={17}/></button></div><button type="button" onClick={() => addReviewTarget(memory)} className="mt-3 flex min-h-10 w-full items-center justify-center gap-1.5 rounded-xl bg-white text-sm font-bold text-forest transition-transform active:scale-[0.96]"><Plus size={15}/> Tambah ke hari ini</button></div> }) : <p className="rounded-2xl bg-[#f7faf4] p-4 text-sm leading-relaxed text-slate-500">Belum ada hafalan tersimpan untuk {profile.name}. Target Hafalan Baru akan muncul di sini setelah selesai.</p>}</div></aside></div></div>{showAdd && <AddTargetSheet memories={memories} initialSurahId={suggestedSurahId} onSave={saveTarget} onClose={() => { setShowAdd(false); setSuggestedSurahId('1') }}/>}</main>
 }
 
 function AudioLibraryShortcut({ onOpen }) {
@@ -1016,8 +1293,9 @@ function LegacyApp() {
   const finishNewTarget = async (target) => {
     const completed = { ...target, status: 'done' }
     await db.targets.put(completed)
+    await completeTodayCoachAction(profile.id)
     const existing = await db.memories.filter((memory) => memory.surahId === target.surahId && memory.startAyah === target.startAyah && memory.endAyah === target.endAyah).first()
-    if (!existing) await db.memories.put({ id: makeId('memory'), surahId: target.surahId, startAyah: target.startAyah, endAyah: target.endAyah, intervalIndex: 0, lastReviewedAt: null, nextReviewAt: null })
+    if (!existing) await db.memories.put(createScheduledMemory({ id: makeId('memory'), surahId: target.surahId, startAyah: target.startAyah, endAyah: target.endAyah }, todayKey()))
     writeRouteData(ACTIVE_TARGET_KEY, null)
     writeRouteData(ACTIVE_PRACTICE_SESSION_KEY, null)
     navigate('/')
@@ -1028,8 +1306,8 @@ function LegacyApp() {
     navigate('/')
   }
   const finishReview = async (memory, result) => {
-    const intervalIndex = result === 'pass' ? Math.min((memory.intervalIndex || 0) + 1, SPACED_INTERVALS.length - 1) : 0
-    await db.memories.put({ ...memory, intervalIndex, lastReviewedAt: todayKey(), nextReviewAt: addDays(new Date(), SPACED_INTERVALS[intervalIndex]) })
+    await db.memories.put(scheduleReviewResult(memory, result, todayKey()))
+    await completeTodayCoachAction(profile.id)
     const targets = await db.targets.filter((target) => target.memoryId === memory.id).toArray()
     await Promise.all(targets.filter((target) => target.status !== 'done').map((target) => db.targets.put({ ...target, status: 'done' })))
     writeRouteData(ACTIVE_MEMORY_KEY, null)
@@ -1079,8 +1357,8 @@ function App() {
   const saveFamily = async (next, removedChildIds = []) => {
     const normalized = normalizeFamilyProfile(next)
     const deleted = [...new Set(removedChildIds)]
-    await db.transaction('rw', db.profiles, db.targets, db.memories, async () => {
-      await Promise.all(deleted.flatMap((childId) => [db.targets.where('childId').equals(childId).delete(), db.memories.where('childId').equals(childId).delete()]))
+    await db.transaction('rw', db.profiles, db.targets, db.memories, db.coachCheckins, async () => {
+      await Promise.all(deleted.flatMap((childId) => [db.targets.where('childId').equals(childId).delete(), db.memories.where('childId').equals(childId).delete(), db.coachCheckins.where('childId').equals(childId).delete()]))
       if (normalized.children.length) await db.profiles.put({ ...normalized, updatedAt: new Date().toISOString() })
       else await db.profiles.delete('family')
     })
@@ -1111,18 +1389,27 @@ function App() {
     writeRouteData(ACTIVE_TARGET_KEY, null)
     navigate('/')
   }
-  const finishNewTarget = async (target) => {
+  const finishNewTarget = async (target, { rabtScope = 'none' } = {}) => {
     if (!profile || target.childId !== profile.id) return endPracticeForToday()
     const completed = { ...target, status: 'done' }
     await db.targets.put(completed)
+    await completeTodayCoachAction(profile.id)
     const existing = await db.memories.where('childId').equals(profile.id).filter((memory) => memory.surahId === target.surahId && memory.startAyah === target.startAyah && memory.endAyah === target.endAyah).first()
-    if (!existing) await db.memories.put({ id: makeId('memory'), childId: profile.id, surahId: target.surahId, startAyah: target.startAyah, endAyah: target.endAyah, intervalIndex: 0, lastReviewedAt: null, nextReviewAt: null })
+    if (!existing) await db.memories.put(createScheduledMemory({ id: makeId('memory'), childId: profile.id, surahId: target.surahId, startAyah: target.startAyah, endAyah: target.endAyah }, todayKey()))
+    const surah = surahFor(target.surahId)
+    const memories = await db.memories.where('childId').equals(profile.id).filter((memory) => memory.surahId === target.surahId).toArray()
+    const cardAlreadyCoversSurah = target.startAyah === 1 && target.endAyah === surah?.ayat
+    if (rabtScope !== 'surah' && !cardAlreadyCoversSurah && surah && coversWholeSurah(memories, surah.ayat)) {
+      writeRouteData(ACTIVE_PRACTICE_SESSION_KEY, { targetId: target.id, phase: 'rabt', currentAyah: target.endAyah, rabtScope: 'surah', rabtStartAyah: 1, rabtEndAyah: surah.ayat, rabtStepIndex: 0 })
+      navigate('/rabt')
+      return
+    }
     endPracticeForToday()
   }
   const finishReview = async (memory, result) => {
     if (!profile || memory.childId !== profile.id) { writeRouteData(ACTIVE_MEMORY_KEY, null); navigate('/'); return }
-    const intervalIndex = result === 'pass' ? Math.min((memory.intervalIndex || 0) + 1, SPACED_INTERVALS.length - 1) : 0
-    await db.memories.put({ ...memory, intervalIndex, lastReviewedAt: todayKey(), nextReviewAt: addDays(new Date(), SPACED_INTERVALS[intervalIndex]) })
+    await db.memories.put(scheduleReviewResult(memory, result, todayKey()))
+    await completeTodayCoachAction(profile.id)
     const targets = await db.targets.where('childId').equals(profile.id).filter((target) => target.memoryId === memory.id).toArray()
     await Promise.all(targets.filter((target) => target.status !== 'done').map((target) => db.targets.put({ ...target, status: 'done' })))
     writeRouteData(ACTIVE_MEMORY_KEY, null)
@@ -1143,7 +1430,7 @@ function App() {
     const phase = pathname.slice(1)
     const storedSession = readRouteData(ACTIVE_PRACTICE_SESSION_KEY)
     const session = storedSession?.targetId === target.id ? storedSession : { targetId: target.id, phase, currentAyah: target.startAyah, tikrarCount: 0 }
-    return <NewMemoryFlow target={target} profile={profile} phase={phase} session={session} onCancel={endPracticeForToday} onNavigate={navigate} onUpdateSession={(next) => writeRouteData(ACTIVE_PRACTICE_SESSION_KEY, next)} onFinish={() => finishNewTarget(target)} onEndSession={endPracticeForToday}/>
+    return <NewMemoryFlow target={target} profile={profile} phase={phase} session={session} onCancel={endPracticeForToday} onNavigate={navigate} onUpdateSession={(next) => writeRouteData(ACTIVE_PRACTICE_SESSION_KEY, next)} onFinish={(details) => finishNewTarget(target, details)} onEndSession={endPracticeForToday}/>
   }
   if (pathname === '/murojaah') {
     const memory = readRouteData(ACTIVE_MEMORY_KEY)
