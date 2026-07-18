@@ -1,0 +1,9 @@
+{
+  "name": "Wali Tahfiz Corner",
+  "short_name": "Wali Tahfiz",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#fff9ed",
+  "theme_color": "#47775c",
+  "description": "Pendamping hafalan Juz 30 untuk keluarga."
+}
