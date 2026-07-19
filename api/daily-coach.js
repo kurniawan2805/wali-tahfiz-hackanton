@@ -1,6 +1,13 @@
 const actionTypes = ['start', 'review', 'new', 'listen', 'pause']
 const tones = ['gentle', 'calm', 'celebratory']
 
+export const extractOutputText = (payload) => {
+  if (typeof payload?.output_text === 'string') return payload.output_text.trim()
+  const message = payload?.output?.find((item) => item.type === 'message')
+  const text = message?.content?.find((item) => item.type === 'output_text')?.text
+  return typeof text === 'string' ? text.trim() : ''
+}
+
 const adviceSchema = {
   type: 'object',
   additionalProperties: false,
@@ -84,10 +91,11 @@ export default async function handler(request, response) {
     })
     const payload = await openaiResponse.json()
     if (!openaiResponse.ok) throw new Error(payload?.error?.message || 'OpenAI request failed')
-    const advice = JSON.parse(payload.output_text || '')
+    const advice = JSON.parse(extractOutputText(payload))
     if (!isAdvice(advice, expectedAction)) throw new Error('Respons AI tidak sesuai konteks check-in')
     return response.status(200).json({ advice })
-  } catch {
+  } catch (error) {
+    console.error('[daily-coach] request failed:', error instanceof Error ? error.message : error)
     return response.status(502).json({ error: 'Saran AI belum dapat dibuat.' })
   }
 }

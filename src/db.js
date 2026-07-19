@@ -4,6 +4,7 @@ export const db = new Dexie('wali-tahfiz')
 
 const LEGACY_CHILD_ID = 'child-legacy'
 const defaultRepeats = { talaqqi: 3, tikrar: 10, rabt: 1 }
+const normalizeRole = (role) => role === 'Ibu' ? 'Bunda' : (role || 'Bunda')
 const legacyMemorized = (memorized) => {
   if (Array.isArray(memorized)) return memorized
   if (!memorized) return []
@@ -34,13 +35,13 @@ export function normalizeFamilyProfile(profile) {
     return {
       ...profile,
       id: 'family',
-      role: profile.role || 'Ibu',
+      role: normalizeRole(profile.role),
       children,
       activeChildId: children.some((child) => child.id === profile.activeChildId) ? profile.activeChildId : children[0]?.id || null,
     }
   }
   const child = legacyChild(profile)
-  return { id: 'family', role: profile.role || 'Ibu', activeChildId: child.id, children: [child] }
+  return { id: 'family', role: normalizeRole(profile.role), activeChildId: child.id, children: [child] }
 }
 
 db.version(1).stores({
@@ -82,11 +83,27 @@ db.version(3).stores({
   coachCheckins: '&id, childId, date, [childId+date], updatedAt',
 })
 
+// These compound indexes keep the home screen's day-scoped and memory-scoped
+// lookups from growing with the family's historical data.
+db.version(4).stores({
+  profiles: '&id, updatedAt',
+  targets: '&id, childId, createdAt, status, type, [childId+createdAt], [childId+memoryId]',
+  memories: '&id, childId, surahId, nextReviewAt, [childId+surahId], [childId+nextReviewAt]',
+  preferences: '&key',
+  meta: '&key',
+  coachCheckins: '&id, childId, date, [childId+date], updatedAt',
+})
+
 const legacyKeys = { profile: 'wali-tahfiz-profile', targets: 'wali-tahfiz-targets', memories: 'wali-tahfiz-memories', quranRepeat: 'wali-tahfiz-quran-repeat' }
 const readLegacyJson = (key, fallback) => { try { return JSON.parse(localStorage.getItem(key)) ?? fallback } catch { return fallback } }
 
+export function hasLegacyStorage() {
+  return Object.values(legacyKeys).some((key) => localStorage.getItem(key) !== null)
+}
+
 // Legacy localStorage remains as a recoverable backup. This import runs once.
 export async function migrateLegacyStorage() {
+  if (!hasLegacyStorage()) return
   if (await db.meta.get('legacy-localstorage-v1')) return
   const profile = readLegacyJson(legacyKeys.profile, null)
   const targets = readLegacyJson(legacyKeys.targets, [])
@@ -109,3 +126,21 @@ export const getQuranRepeat = () => db.preferences.get('quran-repeat')
 export const saveQuranRepeat = (value) => db.preferences.put({ key: 'quran-repeat', value })
 export const getQuranRange = () => db.preferences.get('quran-range')
 export const saveQuranRange = (value) => db.preferences.put({ key: 'quran-range', value })
+
+export function localDayBounds(day) {
+  const start = new Date(`${day}T00:00:00`)
+  const end = new Date(start)
+  end.setDate(end.getDate() + 1)
+  return { start: start.toISOString(), end: end.toISOString() }
+}
+
+export function getTargetsForDay(childId, day) {
+  const { start, end } = localDayBounds(day)
+  return db.targets
+    .where('[childId+createdAt]')
+    .between([childId, start], [childId, end], true, false)
+    .reverse()
+    .toArray()
+}
+
+export const getTargetsForMemory = (childId, memoryId) => db.targets.where('[childId+memoryId]').equals([childId, memoryId]).toArray()
