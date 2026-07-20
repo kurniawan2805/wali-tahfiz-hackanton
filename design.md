@@ -133,7 +133,7 @@ Rentang hafalan baru dapat berisi satu atau lebih ayat dan selalu divalidasi ter
 | --- | --- | --- |
 | Talaqqi | Anak mengenali bunyi ayat | Audio diputar sesuai jumlah pengulangan; lanjut otomatis ke Tikrar |
 | Tikrar | Anak menirukan bersama wali | Wali mengetuk penghitung sekali setiap pengulangan; lanjut aktif setelah target tercapai |
-| Rabt | Anak menyambungkan satu kartu hafalan | Dilakukan sekali setelah semua ayat kartu selesai; target satu ayat langsung disimpan setelah Tikrar |
+| Rabt | Anak menyambungkan hafalan dari awal kartu sampai ayat yang baru dipelajari | Dimulai setelah Tikrar pada setiap ayat mulai ayat kedua; ayat pertama langsung lanjut ke Talaqqi ayat berikutnya. Target satu ayat langsung disimpan setelah Tikrar |
 
 Di setiap tahap, tampilkan surat, rentang, progres ayat, dan tombol **Selesai untuk hari ini**. Jangan membuat pengguna merasa kehilangan data saat berhenti; sesi aktif disimpan untuk dilanjutkan. Saat semua kartu berurutan sudah menutup satu surat, jalankan Rabt surat otomatis. Rabt panjang dipecah menjadi blok maksimal 10 ayat dengan tahap sambungan antar-blok, agar surat seperti An-Naba tidak muncul sebagai satu layar 40 ayat.
 

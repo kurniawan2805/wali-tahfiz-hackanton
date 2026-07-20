@@ -163,26 +163,37 @@ export default function NewMemoryFlow({ target, profile, phase, session, onCance
     updatePractice({ phase: 'tikrar', tikrarCount: 0, talaqqiPlayCount: 0 })
     onNavigate('/tikrar')
   }
-  const beginRabt = () => {
-    updatePractice({ phase: 'rabt', tikrarCount: 0, rabtScope: 'card', rabtStartAyah: target.startAyah, rabtEndAyah: target.endAyah, rabtStepIndex: 0 })
+  const beginRabt = (endAyah = activeAyah) => {
+    updatePractice({ phase: 'rabt', tikrarCount: 0, rabtScope: 'card', rabtStartAyah: target.startAyah, rabtEndAyah: endAyah, rabtStepIndex: 0 })
     onNavigate('/rabt')
   }
   const finishTikrar = () => {
-    if (activeAyah < target.endAyah) {
-      updatePractice({ phase: 'talaqqi', currentAyah: activeAyah + 1, tikrarCount: 0, talaqqiPlayCount: 0 })
-      onNavigate('/talaqqi')
-      return
+    // Ayat pertama belum memiliki ayat sebelumnya untuk disambungkan.
+    if (activeAyah === target.startAyah) {
+      if (activeAyah < target.endAyah) {
+        updatePractice({ phase: 'talaqqi', currentAyah: activeAyah + 1, tikrarCount: 0, talaqqiPlayCount: 0 })
+        onNavigate('/talaqqi')
+        return
+      }
+      return onFinish({ rabtScope: 'none' })
     }
-    if (target.startAyah === target.endAyah) return onFinish({ rabtScope: 'none' })
-    beginRabt()
+    beginRabt(activeAyah)
   }
   const continueAfterRabt = () => {
     if (rabtStepIndex < rabtSteps.length - 1) {
       updatePractice({ rabtStepIndex: rabtStepIndex + 1 })
       return
     }
+    if (rabtScope === 'card' && rabtEndAyah < target.endAyah) {
+      updatePractice({ phase: 'talaqqi', currentAyah: rabtEndAyah + 1, tikrarCount: 0, talaqqiPlayCount: 0 })
+      onNavigate('/talaqqi')
+      return
+    }
     onFinish({ rabtScope })
   }
+  const isFinalCardRabt = rabtScope === 'card' && rabtEndAyah === target.endAyah
+  const rabtRangeLabel = rangeLabel(rabtStartAyah, rabtEndAyah)
+  const rabtNextAyah = rabtEndAyah + 1
   const retryRabt = () => {
     audioRef.current?.pause()
     setRangeAudioAyah(rabtDisplayStart)
@@ -205,10 +216,10 @@ export default function NewMemoryFlow({ target, profile, phase, session, onCance
   const nextLabel = phase === 'talaqqi'
     ? 'Lanjut ke Tikrar'
     : phase === 'tikrar'
-      ? activeAyah < target.endAyah ? `Lanjut ayat ${activeAyah + 1}` : target.startAyah === target.endAyah ? 'Simpan hafalan' : 'Lanjut ke Rabt'
+      ? activeAyah === target.startAyah && activeAyah < target.endAyah ? `Lanjut ayat ${activeAyah + 1}` : activeAyah === target.startAyah ? 'Simpan hafalan' : `Sambungkan ${rangeLabel(target.startAyah, activeAyah)}`
       : rabtStepIndex < rabtSteps.length - 1
         ? rabtSteps[rabtStepIndex + 1]?.type === 'bridge' ? 'Sambungkan blok berikutnya' : 'Lanjut Rabt'
-        : rabtScope === 'surah' ? 'Selesai Rabt surat' : 'Simpan hafalan'
+        : rabtScope === 'surah' ? 'Selesai Rabt surat' : isFinalCardRabt ? 'Simpan hafalan' : `Lanjut ayat ${rabtNextAyah}`
   const goPrevious = () => {
     audioRef.current?.pause()
     setIsPlaying(false)
@@ -229,16 +240,16 @@ export default function NewMemoryFlow({ target, profile, phase, session, onCance
     setIsPlaying(false)
     setRangeAudioAyah(null)
     if (phase === 'talaqqi') return finishTalaqqi()
-    if (phase === 'tikrar') return beginRabt()
+    if (phase === 'tikrar') return finishTikrar()
     onFinish({ rabtScope })
   }
 
-  const rabtTitle = rabtScope === 'surah' ? 'Sambungkan satu surat' : 'Sambungkan kartu ini'
+  const rabtTitle = rabtScope === 'surah' ? 'Sambungkan satu surat' : `Sambungkan ${rabtRangeLabel}`
   const rabtHelper = rabtStep?.type === 'bridge'
     ? `Ajak anak meneruskan dari ayat ${rabtDisplayStart} ke ayat ${rabtDisplayEnd}.`
     : rabtScope === 'surah'
       ? 'Kita sambungkan surat ini sedikit demi sedikit, satu blok pada satu waktu.'
-      : 'Berikan waktu anak melanjutkan ayat-ayat dalam kartu ini.'
+      : `Sambungkan hafalan dari ayat ${rabtStartAyah} sampai ayat ${rabtEndAyah}, lalu lanjut ke ayat berikutnya.`
 
   return <main className="practice-page"><audio ref={audioRef} src={audioUrl} preload="none" onPlay={() => { setAudioError(''); setIsPlaying(true) }} onPause={() => { if (!audioRef.current?.ended) setIsPlaying(false) }} onError={() => { setIsPlaying(false); setAudioError('Audio belum bisa diputar. Periksa koneksi, lalu coba lagi.') }} onEnded={handleAudioEnded}/><div className="practice-shell"><header className="flex items-center justify-between gap-3"><button type="button" onClick={closeForToday} className="flex min-h-11 items-center gap-2 text-sm font-bold text-forest"><ArrowLeft size={18}/> Selesai untuk hari ini</button><div className="flex shrink-0 items-center gap-2"><button type="button" onClick={advanceDemo} className="flex min-h-11 items-center rounded-2xl bg-sage px-3 text-xs font-bold text-forest transition-[transform,background-color] hover:bg-[#c9dec9] active:scale-[0.96]">Demo: {phase === 'rabt' ? 'selesai' : 'lanjut'}</button><span className="rounded-full bg-peach px-3 py-1.5 text-xs font-bold text-terracotta">5 MENIT BERSAMA</span></div></header><section className="glass-card mt-5 w-full overflow-hidden lg:mt-8"><div className="bg-forest px-5 py-6 text-white lg:px-10 lg:py-8"><p className="text-sm font-semibold text-white/70">QS. {item?.name} · {rangeLabel(target.startAyah, target.endAyah)}</p><div className="mt-2 flex flex-wrap items-end justify-between gap-3"><h1 className="font-display text-3xl lg:text-4xl">{phaseLabel}</h1><span className="rounded-full bg-white/15 px-3 py-1.5 text-sm font-bold tabular-nums">{phase === 'rabt' ? rabtStep?.type === 'bridge' ? `Sambungan ${rabtStep.fromBlock + 1} → ${rabtStep.toBlock + 1}` : `Blok ${(rabtStep?.blockIndex || 0) + 1}/${Math.ceil((rabtEndAyah - rabtStartAyah + 1) / RABT_BLOCK_SIZE)}` : `Ayat ${activeAyah}/${target.endAyah}`}</span></div><div className="mt-6 grid grid-cols-3 gap-2 text-center text-xs font-bold"><span className={phase === 'talaqqi' ? 'text-peach' : 'text-white/60'}>1. Dengarkan</span><span className={phase === 'tikrar' ? 'text-peach' : 'text-white/60'}>2. Ikuti</span><span className={phase === 'rabt' ? 'text-peach' : 'text-white/60'}>3. Sambungkan</span></div></div><div className="p-5 lg:p-10">{loadError ? <p role="alert" className="rounded-2xl bg-[#fff2df] p-4 text-sm text-terracotta">{loadError}</p> : <><div className={`practice-ayah-panel ${phase === 'rabt' ? 'practice-ayah-panel-scroll' : ''}`}><p className="font-serif text-right text-4xl leading-[2.1] text-terracotta lg:text-6xl" dir="rtl">{isLoading ? 'Memuat ayat…' : phase === 'rabt' ? rangeVerses.map((ayah) => <span key={ayah.number} className="block">{ayah.text} <small className="mr-2 font-sans text-base font-bold text-slate-400">{ayah.number}</small></span>) : currentVerse?.text}</p></div><p className="mt-3 text-center text-xs font-bold uppercase tracking-[0.16em] text-slate-400">{phase === 'rabt' ? rangeLabel(rabtDisplayStart, rabtDisplayEnd) : `Ayat ${activeAyah}`}</p></>}{audioError && <p role="alert" className="mx-auto mt-5 max-w-2xl rounded-2xl bg-[#fff2df] p-4 text-sm font-semibold text-terracotta">{audioError}</p>}{phase === 'talaqqi' && <div className="mx-auto mt-8 max-w-2xl"><p className="step-label bg-sage text-forest">LANGKAH 1 · DENGARKAN</p><h2 className="font-display mt-3 text-3xl text-forest">Dengarkan ayat ini {talaqqiTarget}×</h2><p className="mt-2 text-sm leading-relaxed text-slate-600">Audio ayat akan diputar otomatis sebanyak {talaqqiTarget} kali, lalu dilanjutkan ke Tikrar.</p><button type="button" disabled={isLoading || isPlaying} onClick={playTalaqqi} className="primary-button mt-6 disabled:cursor-not-allowed disabled:opacity-50"><Volume2 size={20}/>{isPlaying ? `Memutar ${talaqqiPlayCount}/${talaqqiTarget}×…` : `Putar ayat ${activeAyah} ${talaqqiTarget}×`}</button></div>}{phase === 'tikrar' && <div className="mx-auto mt-8 max-w-2xl"><p className="step-label bg-sage text-forest">LANGKAH 2 · IKUTI</p><h2 className="font-display mt-3 text-3xl text-forest">Ulangi bersama {tikrarTarget}×</h2><p className="mt-2 text-sm leading-relaxed text-slate-600">Orang tua membacakan perlahan, lalu anak menirukan. Ketuk tombol setelah satu kali selesai didengar.</p><TikrarFruitCounter count={tikrarCount} target={tikrarTarget}/><div className="tikrar-fruit-controls" role="group" aria-label="Atur jumlah buah yang dipetik"><button type="button" disabled={tikrarCount === 0} onClick={removeTikrar} aria-label="Kurangi satu buah" className="tikrar-fruit-control disabled:cursor-not-allowed disabled:opacity-45"><span aria-hidden="true">−</span></button><button type="button" disabled={tikrarCount >= tikrarTarget} onClick={addTikrar} aria-label="Tambah satu buah" className="tikrar-fruit-control tikrar-fruit-control-add disabled:cursor-not-allowed disabled:opacity-45"><Plus size={22}/></button></div></div>}{phase === 'rabt' && <div className="mx-auto mt-8 max-w-2xl"><p className="step-label bg-sage text-forest">{rabtScope === 'surah' ? 'RABT SURAT' : 'LANGKAH 3 · SAMBUNGKAN'}</p><h2 className="font-display mt-3 text-3xl text-forest">{rabtTitle}</h2><p className="mt-2 text-sm leading-relaxed text-slate-600">{rabtHelper}</p><button type="button" disabled={isLoading || isPlaying} onClick={playRabtRange} className="secondary-button mt-6 w-full disabled:cursor-not-allowed disabled:opacity-45"><Volume2 size={18}/>{isPlaying ? `Memutar ayat ${rangeAudioAyah}…` : `Putar contoh ${rangeLabel(rabtDisplayStart, rabtDisplayEnd)}`}</button><div className="mt-5"><p className="rounded-2xl bg-[#eff6eb] p-4 text-center text-sm font-bold text-forest">{rabtStep?.type === 'bridge' ? 'Beri waktu anak menemukan sambungannya, lalu lanjutkan bersama.' : 'Bagaimana kelancaran hafalan hari ini?'}</p><button type="button" onClick={retryRabt} className="secondary-button mt-3 w-full !border-peach !text-terracotta"><RotateCcw size={18}/> Ulangi bagian ini</button></div></div>}<nav className="practice-phase-navigation" aria-label="Navigasi langkah hafalan"><button type="button" onClick={goPrevious} className="secondary-button"><ArrowLeft size={18}/>{previousLabel}</button><button type="button" disabled={nextDisabled} onClick={goNext} className="primary-button disabled:cursor-not-allowed disabled:opacity-45">{nextLabel}<ArrowRight size={18}/></button></nav></div></section></div></main>
 }
