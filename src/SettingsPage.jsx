@@ -1,5 +1,15 @@
 import { useState } from 'react'
 import { Baby, Check, Plus, Settings, UserRound } from 'lucide-react'
+import { normalizeFamilyProfile } from './db'
+
+const createChild = () => ({
+  id: `child-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+  name: '',
+  age: '',
+  icon: '🌙',
+  memorized: [],
+  repeats: { talaqqi: 3, tikrar: 10, rabt: 1 },
+})
 
 export default function SettingsPage({ family, save, back, ui }) {
   const { ChildEditor, ChildList, PageHeader, RolePicker } = ui
