@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Wali Tahfiz">
+  <rect width="512" height="512" fill="#47775c"/>
+  <circle cx="256" cy="256" r="184" fill="#fff9ed"/>
+  <path d="M141 273c38-28 78-30 115 0v104c-37-30-77-28-115 0V273Z" fill="#f2d6b3"/>
+  <path d="M371 273c-38-28-78-30-115 0v104c37-30 77-28 115 0V273Z" fill="#d3a374"/>
+  <path d="M151 279c34-20 66-18 96 5v77c-31-18-63-18-96 0v-82Z" fill="#fffdf8"/>
+  <path d="M361 279c-34-20-66-18-96 5v77c31-18 63-18 96 0v-82Z" fill="#fffdf8"/>
+  <path d="M256 276v99" fill="none" stroke="#47775c" stroke-linecap="round" stroke-width="10"/>
+  <path d="M212 242c-18-4-32-20-32-39 0-22 18-40 40-40 5 0 10 1 14 3-12 7-20 20-20 35 0 22 18 40 40 40 10 0 19-4 26-10-7 10-19 16-32 16-13 0-25-6-33-15-1 4-2 7-3 10Z" fill="#47775c"/>
+  <path d="M315 155c0 18-15 33-33 33 18 0 33 15 33 33 0-18 15-33 33-33-18 0-33-15-33-33Z" fill="#d3a374"/>
+  <circle cx="181" cy="215" r="7" fill="#f2d6b3"/>
+  <circle cx="350" cy="247" r="6" fill="#f2d6b3"/>
+</svg>

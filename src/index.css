@@ -54,7 +54,8 @@
   .page-shell-reading { @apply max-w-3xl; }
   .page-header { @apply mb-6 flex min-h-12 items-center justify-between gap-3; }
   .page-header > div:first-child { @apply flex-1; }
-  .brand-mark { @apply flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-forest text-white shadow-[0_8px_20px_rgba(71,119,92,.20)]; }
+  .brand-mark { @apply flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-forest shadow-[0_8px_20px_rgba(71,119,92,.20)]; }
+  .brand-mark img { @apply h-full w-full; }
   .page-back-button { @apply flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-white text-forest shadow-[0_8px_20px_rgba(71,119,92,.09)] transition-transform duration-200 active:scale-[0.96]; }
   .page-eyebrow { @apply text-[11px] font-bold uppercase tracking-[.14em] text-forest/70; }
   .page-title { @apply font-display text-3xl leading-tight text-forest; }
@@ -67,7 +68,8 @@
   .onboarding-hero { @apply relative flex items-center justify-between gap-4 overflow-hidden bg-forest px-5 py-5 text-white sm:px-7; }
   .onboarding-hero::after { content: ''; @apply pointer-events-none absolute -bottom-12 -right-7 h-32 w-32 rounded-full bg-white/[.07]; }
   .onboarding-hero-copy { @apply relative z-10 flex min-w-0 items-center gap-3; }
-  .onboarding-hero-mark { @apply flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-white/15 text-peach shadow-[inset_0_1px_0_rgba(255,255,255,.14)]; }
+  .onboarding-hero-mark { @apply flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-white/15 shadow-[inset_0_1px_0_rgba(255,255,255,.14)]; }
+  .onboarding-hero-mark img { @apply h-full w-full; }
   .onboarding-progress { @apply flex shrink-0 items-center gap-1.5; }
   .onboarding-progress li { @apply relative z-10 flex h-8 w-8 items-center justify-center rounded-full bg-white/20 text-xs font-bold text-white/70; }
   .onboarding-progress li::after { content: ''; @apply ml-1.5 h-1.5 w-4 rounded-full bg-white/20; }
@@ -97,6 +99,10 @@
   .primary-button { @apply flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl bg-forest px-5 py-3.5 text-base font-bold text-white shadow-lg shadow-forest/20 transition-[transform,background-color,opacity] duration-200 hover:bg-[#39684d] active:scale-[0.96]; }
   .secondary-button { @apply flex min-h-12 flex-1 items-center justify-center gap-2 rounded-2xl border border-sage bg-white px-4 py-3 font-bold text-forest transition-[transform,background-color] duration-200 hover:bg-[#f7faf4] active:scale-[0.96]; }
   .icon-button { @apply flex h-11 w-11 items-center justify-center rounded-2xl bg-white text-forest shadow-sm transition-transform duration-200 active:scale-[0.96]; }
+  .pwa-install-prompt { @apply fixed bottom-5 right-4 z-40 flex max-w-[calc(100vw-2rem)] items-center gap-3 rounded-[22px] bg-white p-3.5 shadow-[0_18px_45px_rgba(71,119,92,.20),0_2px_6px_rgba(71,119,92,.08)]; animation: pwa-install-in 260ms cubic-bezier(.2,0,0,1); }
+  .pwa-install-icon { @apply flex h-11 w-11 shrink-0 items-center justify-center rounded-[14px] bg-[#eff6eb] text-forest; }
+  .pwa-install-button { @apply flex min-h-11 shrink-0 items-center justify-center rounded-xl bg-forest px-3.5 text-sm font-bold text-white transition-[transform,background-color] duration-200 hover:bg-[#39684d] active:scale-[0.96]; }
+  .pwa-install-close { @apply flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-slate-500 transition-[transform,background-color,color] duration-200 hover:bg-[#f7faf4] hover:text-forest active:scale-[0.96]; }
   .audio-control { @apply flex h-11 w-11 items-center justify-center rounded-2xl bg-[#f7faf4] text-forest transition-[transform,background-color] active:scale-[0.96]; }
   .ayah-card { @apply relative overflow-hidden rounded-[26px] bg-[#fffdf8] p-5 shadow-sm transition-[transform,background-color,box-shadow] duration-200 active:scale-[0.96]; box-shadow: 0 10px 26px rgb(71 119 92 / 7%), 0 1px 2px rgb(71 119 92 / 5%); }
   .ayah-card::before { content: ''; @apply absolute inset-y-5 left-0 w-1 rounded-r-full bg-transparent transition-[background-color] duration-200; }
@@ -164,6 +170,7 @@
   .stat-card-new .stat-card-icon { @apply bg-[#fff1df] text-terracotta; }
   .home-hero { @apply relative overflow-visible rounded-[30px] bg-forest px-5 py-5 text-white shadow-soft sm:px-6 sm:py-7 lg:px-10 lg:py-9; }
   .home-hero-top { @apply relative flex min-h-11 items-center justify-between gap-3; }
+  .home-hero-brand-mark { @apply h-6 w-6 shrink-0 rounded-lg outline outline-1 outline-white/20; }
   .home-hero-settings { @apply flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-white/15 text-white transition-[transform,background-color] duration-200 hover:bg-white/20 active:scale-[0.96]; }
   .home-hero-copy { @apply relative mt-5; }
   .home-hero-copy h1 { @apply text-3xl leading-[1.08] sm:text-4xl; }
@@ -271,7 +278,7 @@
 
 @media (prefers-reduced-motion: reduce) {
   .ayah-card, .range-settings-toggle, .range-choice, .range-switch, .bismillah-card, .page-back-button, .page-action-button, .practice-shell > header, .tikrar-tree-fruit, .coach-fab, .coach-message { transition-duration: 0ms; }
-  .tikrar-basket-fruit { animation: none; }
+  .tikrar-basket-fruit, .pwa-install-prompt { animation: none; }
 }
 
 @keyframes phase-in {
@@ -282,8 +289,10 @@
 @keyframes coach-message-in { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes coach-pulse { 50% { transform: scale(1.35); opacity: .65; } }
 @keyframes fruit-in-basket { from { opacity: 0; transform: translateY(-22px) scale(.45); } to { opacity: 1; transform: translateY(0) scale(1); } }
+@keyframes pwa-install-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
 
 @media (max-width: 639px) {
   .coach-dialog-layer { @apply items-end p-0; }
   .coach-conversation-panel { @apply max-h-[min(42rem,calc(100dvh-1rem))] w-full rounded-b-none rounded-t-[30px]; }
+  .pwa-install-prompt { @apply bottom-20; }
 }

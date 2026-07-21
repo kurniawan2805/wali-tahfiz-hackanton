@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, useRef, useState } from 'react'
-import { ArrowLeft, ArrowRight, Baby, Bot, CalendarDays, Check, ChevronDown, CircleCheck, Clock3, Headphones, Leaf, Pause, Play, Plus, RotateCcw, Search, Send, Settings, Shuffle, SkipBack, SkipForward, SlidersHorizontal, Sparkles, Trash2, Upload, UserRound, Volume2, X } from 'lucide-react'
+import { ArrowLeft, ArrowRight, Baby, Bot, CalendarDays, Check, ChevronDown, CircleCheck, Clock3, Download, Headphones, Leaf, Pause, Play, Plus, RotateCcw, Search, Send, Settings, Share, Shuffle, SkipBack, SkipForward, SlidersHorizontal, Sparkles, Trash2, Upload, UserRound, Volume2, X } from 'lucide-react'
 import { clearAllData, createBackup, db, getProfile, getQuranRange, getQuranRepeat, getTargetsForDay, getTargetsForMemory, hasLegacyStorage, migrateLegacyStorage, normalizeFamilyProfile, restoreBackup, saveProfile, saveQuranRange, saveQuranRepeat } from './db'
 import { createCoachCheckin, isPersonalAdvice, readinessForCondition } from './coachCheckin'
 import { createScheduledMemory, getReviewRecommendations, hasReviewTargetForToday, isCreatedToday, localDateKey, reviewDueLabel, scheduleReviewResult } from './reviewSchedule'
@@ -141,7 +141,7 @@ function IconPicker({ value, onChange }) { return <div className="grid grid-cols
 function PageHeader({ title, eyebrow = 'Wali Tahfiz', back, action, className = '' }) {
   return <header className={`page-header ${className}`}>
     <div className="flex min-w-0 items-center gap-3">
-      {back ? <button type="button" onClick={back} aria-label="Kembali" className="page-back-button"><ArrowLeft size={20}/></button> : <span className="brand-mark" aria-hidden="true"><Leaf size={20}/></span>}
+      {back ? <button type="button" onClick={back} aria-label="Kembali" className="page-back-button"><ArrowLeft size={20}/></button> : <span className="brand-mark" aria-hidden="true"><img src="/icons/app-icon.svg" alt=""/></span>}
       <div className="min-w-0"><p className="page-eyebrow">{eyebrow}</p><h1 className="page-title">{title}</h1></div>
     </div>
     {action && <div className="shrink-0">{action}</div>}
@@ -191,7 +191,7 @@ function OnboardingShell({ step, children, footer }) {
       <section className="glass-card onboarding-card">
         <div className="onboarding-hero">
           <div className="onboarding-hero-copy">
-            <span className="onboarding-hero-mark" aria-hidden="true"><Leaf size={18}/></span>
+            <span className="onboarding-hero-mark" aria-hidden="true"><img src="/icons/app-icon.svg" alt=""/></span>
             <div>
               <p className="text-[11px] font-bold uppercase tracking-[.14em] text-white/70">Persiapan keluarga</p>
               <p className="mt-1 text-sm font-semibold text-white">Langkah {step} dari 2</p>
@@ -1330,7 +1330,7 @@ function Home({ profile, family, onSelectChild, settings, audioLibrary, openPrac
   }
   if (!isHydrated) return <main className="min-h-screen bg-cream pb-12"><div className="mx-auto max-w-6xl px-4 pt-6 sm:px-6 lg:px-8 lg:pt-10" aria-busy="true"><div className="h-36 animate-pulse rounded-[32px] bg-forest/90"/><div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px]"><section className="h-80 animate-pulse rounded-[32px] bg-white/90"/><aside className="h-80 animate-pulse rounded-[32px] bg-white/90"/></div><p className="sr-only">Memuat data hafalan {profile.name}…</p></div></main>
   return <main className="min-h-screen bg-cream pb-12"><div className="mx-auto max-w-6xl px-4 pt-6 sm:px-6 lg:px-8 lg:pt-10">
-    <header className="home-hero"><div className="pointer-events-none absolute -right-10 -top-14 h-44 w-44 rounded-full bg-white/10"/><div className="home-hero-top"><p className="flex min-w-0 items-center gap-1.5 text-sm font-semibold text-white/75"><Sparkles size={15} className="shrink-0"/> Assalamu'alaikum, {profile.role}!</p><button type="button" onClick={settings} aria-label="Pengaturan" className="home-hero-settings"><Settings size={21}/></button></div><div className="home-hero-copy"><h1 className="font-display">Hari hafalan · {profile.name}</h1><p>Sedikit demi sedikit, dengan hati yang gembira.</p></div><div className="home-hero-child"><ChildSwitcher family={family} onSelect={onSelectChild} onManage={settings}/></div></header>
+    <header className="home-hero"><div className="pointer-events-none absolute -right-10 -top-14 h-44 w-44 rounded-full bg-white/10"/><div className="home-hero-top"><p className="flex min-w-0 items-center gap-1.5 text-sm font-semibold text-white/75"><img src="/icons/app-icon.svg" alt="" className="home-hero-brand-mark"/><span>Wali Tahfiz</span><span className="text-white/35">·</span><Sparkles size={15} className="shrink-0"/> Assalamu'alaikum, {profile.role}!</p><button type="button" onClick={settings} aria-label="Pengaturan" className="home-hero-settings"><Settings size={21}/></button></div><div className="home-hero-copy"><h1 className="font-display">Hari hafalan · {profile.name}</h1><p>Sedikit demi sedikit, dengan hati yang gembira.</p></div><div className="home-hero-child"><ChildSwitcher family={family} onSelect={onSelectChild} onManage={settings}/></div></header>
     <div className="dashboard-status-grid mt-6">
       <div className="stat-card stat-card-target"><span className="stat-card-icon"><CalendarDays size={19}/></span><span><b>{todayTargets.length}</b><small>Target hari ini</small></span></div>
       <div className="stat-card stat-card-complete"><span className="stat-card-icon"><CircleCheck size={19}/></span><span><b>{done}</b><small>{todayTargets.length ? `${done} dari ${todayTargets.length} selesai` : 'Siap mulai hari ini'}</small></span></div>
@@ -1349,6 +1349,47 @@ function Home({ profile, family, onSelectChild, settings, audioLibrary, openPrac
 
 function AudioLibraryShortcut({ onOpen }) {
   return <button type="button" onClick={onOpen} aria-label="Buka Dengar Qur’an" className="fixed bottom-5 left-4 z-40 flex min-h-12 items-center gap-2 rounded-2xl bg-forest px-4 text-sm font-bold text-white shadow-[0_12px_28px_rgba(71,119,92,.28)] transition-transform active:scale-[0.96]"><Headphones size={19}/><span>Dengar Qur’an</span></button>
+}
+
+function isInstalledPwa() {
+  return window.matchMedia?.('(display-mode: standalone)').matches || window.navigator.standalone === true
+}
+
+function isIosSafari() {
+  const userAgent = window.navigator.userAgent
+  return /iPad|iPhone|iPod/.test(userAgent) && !window.MSStream
+}
+
+function PwaInstallPrompt() {
+  const [deferredPrompt, setDeferredPrompt] = useState(null)
+  const [showIosHelp, setShowIosHelp] = useState(false)
+
+  useEffect(() => {
+    if (isInstalledPwa()) return undefined
+    const captureInstallPrompt = (event) => {
+      event.preventDefault()
+      setDeferredPrompt(event)
+    }
+    window.addEventListener('beforeinstallprompt', captureInstallPrompt)
+    if (isIosSafari()) setShowIosHelp(true)
+    return () => window.removeEventListener('beforeinstallprompt', captureInstallPrompt)
+  }, [])
+
+  const install = async () => {
+    if (!deferredPrompt) return
+    await deferredPrompt.prompt()
+    setDeferredPrompt(null)
+  }
+
+  if (!deferredPrompt && !showIosHelp) return null
+  return <aside className="pwa-install-prompt" aria-label="Instal aplikasi Wali Tahfiz">
+    <span className="pwa-install-icon" aria-hidden="true"><Download size={19}/></span>
+    <div className="min-w-0 flex-1">
+      <p className="font-bold text-forest">Pasang Wali Tahfiz</p>
+      <p className="mt-0.5 text-xs leading-relaxed text-slate-500">{deferredPrompt ? 'Akses lebih cepat dari layar utama dan tetap nyaman dipakai.' : <>Ketuk <Share size={13} className="inline -translate-y-px" aria-label="Bagikan"/> lalu pilih <b>Tambah ke Layar Utama</b>.</>}</p>
+    </div>
+    {deferredPrompt ? <button type="button" onClick={install} className="pwa-install-button">Pasang</button> : <button type="button" onClick={() => setShowIosHelp(false)} aria-label="Tutup petunjuk instalasi" className="pwa-install-close"><X size={18}/></button>}
+  </aside>
 }
 
 function usePageRouter() {
@@ -1580,7 +1621,7 @@ function App() {
     }
     return <Suspense fallback={<RouteFallback/>}><LazyReviewPlayer memory={memory} page onClose={() => navigate('/')} onReviewed={(result) => finishReview(memory, result)}/></Suspense>
   }
-  return <>{home}<AudioLibraryShortcut onOpen={() => navigate('/audio')}/></>
+  return <>{home}<PwaInstallPrompt/><AudioLibraryShortcut onOpen={() => navigate('/audio')}/></>
 }
 
 export default App
