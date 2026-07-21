@@ -104,9 +104,18 @@ Supported values are `id` and `en`. Families can always change the language and 
 
 For the full product and interface guidance, see [design.md](design.md).
 
-## How Codex and GPT-5.6 were used
+## 🛠️ Engineering Insights & AI Workflow
 
-Codex accelerated the workflow from product idea to a working, testable PWA. It helped inspect the existing React code, map the real feature set, refine the interface language, improve the Qur’an listening experience, update the product and design documentation, run the test/build checks, and prepare the repository for review.
+This project was my first time using OpenAI Codex to build a complete, production-ready application from scratch. The experience was smooth and empowering: Codex helped turn an early product idea into a working, testable PWA while keeping the key product and engineering decisions human-led.
+
+### Model routing strategy
+
+Because Sol-tier access was unavailable on my account, I used a multi-tier model strategy that matched the model to the kind of work at hand:
+
+- **Planning and architecture:** GPT-5.6 Terra (**High — Xtra High**) for structural decisions, schema design, and system flows.
+- **Task execution:** Terra Medium and Luna for bite-sized coding tasks, UI components, test scripts, and rapid iteration with lower latency.
+
+Codex helped inspect the existing React code, map the real feature set, refine the interface language, improve the Qur’an listening experience, update the product and design documentation, run the test/build checks, and prepare the repository for review.
 
 Key implementation decisions were made with a human-in-the-loop:
 

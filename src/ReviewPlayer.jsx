@@ -66,14 +66,14 @@ export default function ReviewPlayer({ memory, onClose, onReviewed, page = false
     setLoadError('')
     setVerses([])
     fetch(`https://api.alquran.cloud/v1/surah/${memory.surahId}/quran-uthmani`, { signal: controller.signal })
-      .then((response) => { if (!response.ok) throw new Error('Teks Arab tidak dapat dimuat.') ; return response.json() })
+      .then((response) => { if (!response.ok) throw new Error(t('review.arabicLoadError')) ; return response.json() })
       .then((payload) => {
         if (controller.signal.aborted) return
         setVerses((payload?.data?.ayahs || [])
           .filter((ayah) => ayah.numberInSurah >= memory.startAyah && ayah.numberInSurah <= memory.endAyah)
           .map((ayah) => ({ number: ayah.numberInSurah, globalNumber: ayah.number, text: stripBismillah(ayah.text, memory.surahId, ayah.numberInSurah) })))
       })
-      .catch((error) => { if (!controller.signal.aborted) setLoadError(error.message || 'Teks Arab belum dapat dimuat.') })
+      .catch((error) => { if (!controller.signal.aborted) setLoadError(error.message || t('review.arabicUnavailable')) })
       .finally(() => { if (!controller.signal.aborted) setIsLoading(false) })
     return () => controller.abort()
   }, [memory.endAyah, memory.startAyah, memory.surahId])

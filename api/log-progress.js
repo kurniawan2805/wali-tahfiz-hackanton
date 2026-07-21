@@ -53,7 +53,7 @@ export default async function handler(request, response) {
   try {
     const openaiResponse = await fetch('https://api.openai.com/v1/responses', {
       method: 'POST', headers: { Authorization: `Bearer ${process.env.OPENAI_API_KEY}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ model: process.env.OPENAI_MODEL || 'gpt-5.2', store: false,
+      body: JSON.stringify({ model: process.env.OPENAI_MODEL || 'gpt-4.1-nano', store: false,
         instructions: locale === 'en'
           ? 'Interpret the guardian text as completed new memorisation or completed murojaah only. Return exact surah IDs and ayah ranges from the supplied catalogue. Never infer unsupported actions, partial attempts, notes, or unknown ranges. Put uncertain or unrecognised phrases in unrecognised and explain what the guardian should clarify in clarification. Do not mention that you are AI.'
           : 'Tafsirkan teks wali hanya sebagai hafalan baru yang selesai atau murojaah yang selesai. Kembalikan ID surat dan rentang ayat yang tepat dari katalog. Jangan mengarang tindakan lain, percobaan sebagian, catatan, atau rentang yang tidak jelas. Masukkan frasa yang tidak dikenali ke unrecognised dan jelaskan yang perlu diklarifikasi di clarification. Jangan menyebut bahwa Anda adalah AI.',

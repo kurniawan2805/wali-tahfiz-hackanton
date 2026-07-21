@@ -29,7 +29,7 @@ const audioSurahs = [
   { id: '114', name: 'An-Nas', arabic: 'ٱلنَّاس', ayat: 6, group: 'juz30' },
 ]
 
-const rangeLabel = (start, end) => `Ayat ${start}–${end}`
+const rangeLabel = (start, end, t) => t('practice.verseRange', { start, end })
 const surahFor = (id) => audioSurahs.find((surah) => surah.id === id) || surahs.find((surah) => surah.id === id)
 
 const stripBismillah = (text, surahId, ayahNumber) => {
@@ -112,14 +112,14 @@ export default function NewMemoryFlow({ target, profile, phase, session, onCance
     setIsLoading(true)
     setLoadError('')
     fetch(`https://api.alquran.cloud/v1/surah/${target.surahId}/quran-uthmani`, { signal: controller.signal })
-      .then((response) => { if (!response.ok) throw new Error('Ayat tidak dapat dimuat.') ; return response.json() })
+      .then((response) => { if (!response.ok) throw new Error(t('practice.verseLoadError')) ; return response.json() })
       .then((payload) => {
         if (controller.signal.aborted) return
         const nextVerses = (payload?.data?.ayahs || []).map((ayah) => ({ number: ayah.numberInSurah, globalNumber: ayah.number, text: stripBismillah(ayah.text, target.surahId, ayah.numberInSurah) }))
-        if (!nextVerses.length) throw new Error('Ayat tidak ditemukan.')
+        if (!nextVerses.length) throw new Error(t('practice.verseNotFound'))
         setVerses(nextVerses)
       })
-      .catch((reason) => { if (!controller.signal.aborted) setLoadError(reason.message || 'Ayat belum dapat dimuat.') })
+      .catch((reason) => { if (!controller.signal.aborted) setLoadError(reason.message || t('practice.verseUnavailable')) })
       .finally(() => { if (!controller.signal.aborted) setIsLoading(false) })
     return () => controller.abort()
   }, [target.surahId])
@@ -129,7 +129,7 @@ export default function NewMemoryFlow({ target, profile, phase, session, onCance
     audioRef.current.load()
     audioRef.current.play().catch(() => {
       setIsPlaying(false)
-      setAudioError('Audio belum bisa diputar. Periksa koneksi, lalu coba lagi.')
+      setAudioError(t('practice.audioError'))
     })
   }, [audioUrl, isPlaying])
 
@@ -142,7 +142,7 @@ export default function NewMemoryFlow({ target, profile, phase, session, onCance
         audioRef.current.currentTime = 0
         audioRef.current.play().catch(() => {
           setIsPlaying(false)
-          setAudioError('Audio belum bisa diputar. Periksa koneksi, lalu coba lagi.')
+          setAudioError(t('practice.audioError'))
         })
         return
       }
@@ -196,7 +196,7 @@ export default function NewMemoryFlow({ target, profile, phase, session, onCance
     onFinish({ rabtScope })
   }
   const isFinalCardRabt = rabtScope === 'card' && rabtEndAyah === target.endAyah
-  const rabtRangeLabel = rangeLabel(rabtStartAyah, rabtEndAyah)
+  const rabtRangeLabel = rangeLabel(rabtStartAyah, rabtEndAyah, t)
   const rabtNextAyah = rabtEndAyah + 1
   const retryRabt = () => {
     audioRef.current?.pause()
@@ -216,14 +216,14 @@ export default function NewMemoryFlow({ target, profile, phase, session, onCance
     : phase === 'tikrar'
       ? tikrarCount < tikrarTarget
       : false
-  const previousLabel = phase === 'rabt' && rabtStepIndex > 0 ? 'Rabt sebelumnya' : previousPhase ? `Kembali ke ${previousPhase === 'talaqqi' ? 'Talaqqi' : 'Tikrar'}` : 'Selesai untuk hari ini'
+  const previousLabel = phase === 'rabt' && rabtStepIndex > 0 ? t('practice.previousRabt') : previousPhase ? t('practice.backTo', { phase: previousPhase === 'talaqqi' ? 'Talaqqi' : 'Tikrar' }) : t('practice.endToday')
   const nextLabel = phase === 'talaqqi'
-    ? 'Lanjut ke Tikrar'
+    ? t('practice.nextTikrar')
     : phase === 'tikrar'
-      ? activeAyah === target.startAyah && activeAyah < target.endAyah ? `Lanjut ayat ${activeAyah + 1}` : activeAyah === target.startAyah ? 'Simpan hafalan' : `Sambungkan ${rangeLabel(target.startAyah, activeAyah)}`
+      ? activeAyah === target.startAyah && activeAyah < target.endAyah ? t('practice.nextVerse', { ayah: activeAyah + 1 }) : activeAyah === target.startAyah ? t('practice.saveMemory') : t('practice.connectRange', { range: rangeLabel(target.startAyah, activeAyah, t) })
       : rabtStepIndex < rabtSteps.length - 1
-        ? rabtSteps[rabtStepIndex + 1]?.type === 'bridge' ? 'Sambungkan blok berikutnya' : 'Lanjut Rabt'
-        : rabtScope === 'surah' ? 'Selesai Rabt surat' : isFinalCardRabt ? 'Simpan hafalan' : `Lanjut ayat ${rabtNextAyah}`
+        ? rabtSteps[rabtStepIndex + 1]?.type === 'bridge' ? t('practice.nextBlock') : t('practice.continueConnection')
+        : rabtScope === 'surah' ? t('practice.finishSurah') : isFinalCardRabt ? t('practice.saveMemory') : t('practice.nextVerse', { ayah: rabtNextAyah })
   const goPrevious = () => {
     audioRef.current?.pause()
     setIsPlaying(false)
@@ -248,12 +248,12 @@ export default function NewMemoryFlow({ target, profile, phase, session, onCance
     onFinish({ rabtScope })
   }
 
-  const rabtTitle = rabtScope === 'surah' ? 'Sambungkan satu surat' : `Sambungkan ${rabtRangeLabel}`
+  const rabtTitle = rabtScope === 'surah' ? t('practice.surahConnectionTitle') : t('practice.cardConnectionTitle', { range: rabtRangeLabel })
   const rabtHelper = rabtStep?.type === 'bridge'
-    ? `Ajak anak meneruskan dari ayat ${rabtDisplayStart} ke ayat ${rabtDisplayEnd}.`
+    ? t('practice.bridgeHelper', { start: rabtDisplayStart, end: rabtDisplayEnd })
     : rabtScope === 'surah'
-      ? 'Kita sambungkan surat ini sedikit demi sedikit, satu blok pada satu waktu.'
-      : `Sambungkan hafalan dari ayat ${rabtStartAyah} sampai ayat ${rabtEndAyah}, lalu lanjut ke ayat berikutnya.`
+      ? t('practice.surahHelper')
+      : t('practice.cardHelper', { start: rabtStartAyah, end: rabtEndAyah })
 
   return <main className="practice-page"><audio ref={audioRef} src={audioUrl} preload="none" onPlay={() => { setAudioError(''); setIsPlaying(true) }} onPause={() => { if (!audioRef.current?.ended) setIsPlaying(false) }} onError={() => { setIsPlaying(false); setAudioError('Audio belum bisa diputar. Periksa koneksi, lalu coba lagi.') }} onEnded={handleAudioEnded}/><div className="practice-shell"><header className="flex items-center justify-between gap-3"><button type="button" onClick={closeForToday} className="flex min-h-11 items-center gap-2 text-sm font-bold text-forest"><ArrowLeft size={18}/> {t('practice.endToday')}</button><div className="flex shrink-0 items-center gap-2"><button type="button" onClick={advanceDemo} className="flex min-h-11 items-center rounded-2xl bg-sage px-3 text-xs font-bold text-forest transition-[transform,background-color] hover:bg-[#c9dec9] active:scale-[0.96]">Demo: {phase === 'rabt' ? 'done' : 'next'}</button><span className="rounded-full bg-peach px-3 py-1.5 text-xs font-bold text-terracotta">{t('practice.fiveMinutes')}</span></div></header><section className="glass-card mt-5 w-full overflow-hidden lg:mt-8"><div className="bg-forest px-5 py-6 text-white lg:px-10 lg:py-8"><p className="text-sm font-semibold text-white/70">QS. {item?.name} · {rangeLabel(target.startAyah, target.endAyah)}</p><div className="mt-2 flex flex-wrap items-end justify-between gap-3"><h1 className="font-display text-3xl lg:text-4xl">{phaseLabel}</h1><span className="rounded-full bg-white/15 px-3 py-1.5 text-sm font-bold tabular-nums">{phase === 'rabt' ? rabtStep?.type === 'bridge' ? `Sambungan ${rabtStep.fromBlock + 1} → ${rabtStep.toBlock + 1}` : `Blok ${(rabtStep?.blockIndex || 0) + 1}/${Math.ceil((rabtEndAyah - rabtStartAyah + 1) / RABT_BLOCK_SIZE)}` : `Ayat ${activeAyah}/${target.endAyah}`}</span></div><div className="mt-6 grid grid-cols-3 gap-2 text-center text-xs font-bold"><span className={phase === 'talaqqi' ? 'text-peach' : 'text-white/60'}>1. {t('practice.listen')}</span><span className={phase === 'tikrar' ? 'text-peach' : 'text-white/60'}>2. {t('practice.follow')}</span><span className={phase === 'rabt' ? 'text-peach' : 'text-white/60'}>3. {t('practice.connect')}</span></div></div><div className="p-5 lg:p-10">{loadError ? <p role="alert" className="rounded-2xl bg-[#fff2df] p-4 text-sm text-terracotta">{loadError}</p> : <><div className={`practice-ayah-panel ${phase === 'rabt' ? 'practice-ayah-panel-scroll' : ''}`}><p className="font-serif text-right text-4xl leading-[2.1] text-terracotta lg:text-6xl" dir="rtl">{isLoading ? t('practice.loading') : phase === 'rabt' ? rangeVerses.map((ayah) => <span key={ayah.number} className="block">{ayah.text} <small className="mr-2 font-sans text-base font-bold text-slate-400">{ayah.number}</small></span>) : currentVerse?.text}</p></div><p className="mt-3 text-center text-xs font-bold uppercase tracking-[0.16em] text-slate-400">{phase === 'rabt' ? rangeLabel(rabtDisplayStart, rabtDisplayEnd) : `Ayat ${activeAyah}`}</p></>}{audioError && <p role="alert" className="mx-auto mt-5 max-w-2xl rounded-2xl bg-[#fff2df] p-4 text-sm font-semibold text-terracotta">{audioError}</p>}{phase === 'talaqqi' && <div className="mx-auto mt-8 max-w-2xl"><p className="step-label bg-sage text-forest">{t('practice.step1')}</p><h2 className="font-display mt-3 text-3xl text-forest">{t('practice.listenTitle', { count: talaqqiTarget })}</h2><p className="mt-2 text-sm leading-relaxed text-slate-600">{t('practice.listenBody', { count: talaqqiTarget })}</p><button type="button" disabled={isLoading || isPlaying} onClick={playTalaqqi} className="primary-button mt-6 disabled:cursor-not-allowed disabled:opacity-50"><Volume2 size={20}/>{isPlaying ? t('practice.playing', { count: talaqqiPlayCount, target: talaqqiTarget }) : t('practice.play', { ayah: activeAyah, count: talaqqiTarget })}</button></div>}{phase === 'tikrar' && <div className="mx-auto mt-8 max-w-2xl"><p className="step-label bg-sage text-forest">{t('practice.step2')}</p><h2 className="font-display mt-3 text-3xl text-forest">{t('practice.repeatTitle', { count: tikrarTarget })}</h2><p className="mt-2 text-sm leading-relaxed text-slate-600">{t('practice.repeatBody')}</p><TikrarFruitCounter count={tikrarCount} target={tikrarTarget}/><div className="tikrar-fruit-controls"><button type="button" disabled={tikrarCount === 0} onClick={removeTikrar} className="tikrar-fruit-control disabled:cursor-not-allowed disabled:opacity-45"><span aria-hidden="true">−</span></button><button type="button" disabled={tikrarCount >= tikrarTarget} onClick={addTikrar} className="tikrar-fruit-control tikrar-fruit-control-add disabled:cursor-not-allowed disabled:opacity-45"><Plus size={22}/></button></div></div>}{phase === 'rabt' && <div className="mx-auto mt-8 max-w-2xl"><p className="step-label bg-sage text-forest">{rabtScope === 'surah' ? 'RABT SURAT' : t('practice.step3')}</p><h2 className="font-display mt-3 text-3xl text-forest">{rabtTitle}</h2><p className="mt-2 text-sm leading-relaxed text-slate-600">{rabtHelper}</p><button type="button" disabled={isLoading || isPlaying} onClick={playRabtRange} className="secondary-button mt-6 w-full disabled:cursor-not-allowed disabled:opacity-45"><Volume2 size={18}/>{isPlaying ? t('practice.playing', { count: rangeAudioAyah, target: '' }) : t('practice.playExample', { range: rangeLabel(rabtDisplayStart, rabtDisplayEnd) })}</button><div className="mt-5"><p className="rounded-2xl bg-[#eff6eb] p-4 text-center text-sm font-bold text-forest">{rabtStep?.type === 'bridge' ? t('practice.giveTime') : t('practice.fluency')}</p><button type="button" onClick={retryRabt} className="secondary-button mt-3 w-full !border-peach !text-terracotta"><RotateCcw size={18}/> {t('practice.repeatPart')}</button></div></div>}<nav className="practice-phase-navigation"><button type="button" onClick={goPrevious} className="secondary-button"><ArrowLeft size={18}/>{previousLabel}</button><button type="button" disabled={nextDisabled} onClick={goNext} className="primary-button disabled:cursor-not-allowed disabled:opacity-45">{nextLabel}<ArrowRight size={18}/></button></nav></div></section></div></main>
 }
