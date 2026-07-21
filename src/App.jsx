@@ -6,6 +6,8 @@ import { DEFAULT_LOCALE, LocaleProvider, SUPPORTED_LOCALES, useLocale } from './
 import { applyTheme, THEME_STORAGE_KEY } from './theme'
 import { createCoachCheckin, isPersonalAdvice, readinessForCondition } from './coachCheckin'
 import { createScheduledMemory, getReviewRecommendations, hasReviewTargetForToday, isCreatedToday, localDateKey, reviewDueState, scheduleReviewResult } from './reviewSchedule'
+import { QURAN_CATALOGUE } from './quranCatalogue'
+import { applyValidatedProgress, validateProgressEntries, validateProgressResponse } from './progress'
 
 const LazySettingsPage = lazy(() => import('./SettingsPage'))
 const LazyQuranRangePage = lazy(() => import('./QuranRangePage'))
@@ -1115,7 +1117,7 @@ function checkinFollowUp(checkin, profile) {
   return `Langkah kecil untuk ${child} sudah dipilih. Saat kembali, lanjutkan saja dari satu ayat dan satu pujian.`
 }
 
-function CoachConversation({ profile, targets, memories, checkin, locale: requestedLocale, onSave, onAdd, onStart }) {
+function CoachConversation({ profile, targets, memories, checkin, locale: requestedLocale, onSave, onAdd, onStart, onApplyProgress, autoOpen = false, onAutoOpen }) {
   const { t, locale: contextLocale } = useLocale()
   const locale = requestedLocale || contextLocale
   const [open, setOpen] = useState(false)
@@ -1125,6 +1127,10 @@ function CoachConversation({ profile, targets, memories, checkin, locale: reques
   const [conditions, setConditions] = useState([])
   const [listenRepeats, setListenRepeats] = useState(checkin?.listenRepeats || 3)
   const [readiness, setReadiness] = useState('unanswered')
+  const [progressText, setProgressText] = useState('')
+  const [progressState, setProgressState] = useState(null)
+  const [progressLoading, setProgressLoading] = useState(false)
+  const [progressError, setProgressError] = useState('')
   const closeButtonRef = useRef(null)
   const messagesEndRef = useRef(null)
   const advice = localCoachAdvice({ profile, targets, memories, conditions, listenRepeats }, t)
@@ -1140,6 +1146,9 @@ function CoachConversation({ profile, targets, memories, checkin, locale: reques
     setReadiness('unanswered')
     setAiStatus('')
     setIsLoading(false)
+    setProgressText('')
+    setProgressState(null)
+    setProgressError('')
   }
   const openConversation = () => { resetConversation(); setOpen(true) }
   const closeConversation = () => setOpen(false)
@@ -1158,6 +1167,7 @@ function CoachConversation({ profile, targets, memories, checkin, locale: reques
     document.addEventListener('keydown', closeOnEscape)
     return () => document.removeEventListener('keydown', closeOnEscape)
   }, [open])
+  useEffect(() => { if (autoOpen) { openConversation(); onAutoOpen?.() } }, [autoOpen])
   useEffect(() => {
     if (!open) return undefined
     const motionReduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
@@ -1198,6 +1208,29 @@ function CoachConversation({ profile, targets, memories, checkin, locale: reques
       pushMessage({ role: 'agent', text: t('agent.fallbackAdvice') })
     } finally { setIsLoading(false) }
   }
+  const interpretProgress = async (event) => {
+    event.preventDefault()
+    if (!progressText.trim()) return
+    setProgressLoading(true); setProgressError(''); setProgressState(null)
+    try {
+      const response = await fetch('/api/log-progress', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ locale, text: progressText, today: todayKey(), profile: { name: profile.name, age: profile.age }, catalogue: QURAN_CATALOGUE, memories: memories.map(({ surahId, startAyah, endAyah }) => ({ surahId, startAyah, endAyah })) }) })
+      const raw = await response.text(); let payload = {}
+      try { payload = raw ? JSON.parse(raw) : {} } catch { throw new Error(t('agent.progressInvalid')) }
+      if (!response.ok) throw new Error(payload.error || t('agent.progressUnavailable'))
+      const parsed = validateProgressResponse(payload, QURAN_CATALOGUE, memories, { requireMatching: false })
+      const checked = validateProgressEntries(parsed.entries, QURAN_CATALOGUE, memories, { requireMatching: false })
+      const problems = checked.filter((entry) => (entry.type === 'review' && !entry.memoryId) || (entry.type === 'new' && memories.some((memory) => String(memory.surahId) === entry.surahId && Number(memory.startAyah) === entry.startAyah && Number(memory.endAyah) === entry.endAyah)))
+      setProgressState({ ...parsed, entries: checked, clarification: problems.length ? t('agent.progressClarification') : (parsed.unrecognised.length ? parsed.clarification : '') })
+    } catch (error) { setProgressError(error instanceof Error ? error.message : t('agent.progressUnavailable')) }
+    finally { setProgressLoading(false) }
+  }
+  const confirmProgress = async () => {
+    if (!progressState?.entries?.length || progressState.clarification) return
+    setProgressLoading(true); setProgressError('')
+    try { await onApplyProgress?.(validateProgressEntries(progressState.entries, QURAN_CATALOGUE, memories)); setProgressState(null); setProgressText(''); pushMessage({ role: 'agent', text: t('agent.progressSaved') }) }
+    catch (error) { setProgressError(error instanceof Error ? error.message : t('agent.progressUnavailable')) }
+    finally { setProgressLoading(false) }
+  }
   const takeAction = () => {
     if (readiness !== 'ready') return
     const nextStatus = advice.kind === 'pause' ? 'paused' : 'acted'
@@ -1225,6 +1258,13 @@ function CoachConversation({ profile, targets, memories, checkin, locale: reques
           <div className="coach-quick-replies" role="group" aria-label={t('agent.chooseMood')}>{childConditions.map(([value]) => <button type="button" key={value} aria-pressed={conditions[0] === value} onClick={() => chooseCondition(value)} className={`condition-chip ${conditions[0] === value ? 'condition-chip-active' : ''}`}>{moodLabel(value)}</button>)}</div>
           {readiness === 'ready' && advice.kind === 'start' && <div className="coach-repeat-picker"><p className="coach-section-label">{t('agent.playReciter')}</p><div className="grid grid-cols-3 gap-2">{[1, 3, 5].map((count) => <button type="button" key={count} aria-pressed={listenRepeats === count} onClick={() => chooseRepeat(count)} className={`min-h-11 rounded-xl text-sm font-bold tabular-nums transition-[transform,background-color,color] active:scale-[0.96] ${listenRepeats === count ? 'bg-forest text-white' : 'bg-[#eff6eb] text-forest'}`}>{count}×</button>)}</div></div>}
           {readiness === 'ready' && <div className="coach-actions"><button type="button" onClick={takeAction} className="coach-primary-action">{advice.action}{advice.kind !== 'pause' && <Play size={15} fill="currentColor"/>}</button><button type="button" disabled={isLoading} onClick={getPersonalAdvice} className="coach-ai-action disabled:opacity-60">{isLoading ? t('agent.composing') : <><Sparkles size={16}/>{t('agent.aiAdvice')}</>}</button></div>}
+          <form className="mt-5 border-t border-emerald-900/10 pt-5" onSubmit={interpretProgress}>
+            <label htmlFor="progress-today" className="coach-section-label">{t('agent.progressLabel')}</label>
+            <textarea id="progress-today" value={progressText} onChange={(event) => setProgressText(event.target.value)} rows="3" maxLength="2000" placeholder={t('agent.progressPlaceholder')} className="input-field mt-2 resize-y" disabled={progressLoading}/>
+            <button type="submit" disabled={progressLoading || !progressText.trim()} className="primary-button mt-3 w-full disabled:opacity-50">{progressLoading ? t('agent.progressThinking') : <><Send size={16}/>{t('agent.progressSubmit')}</>}</button>
+          </form>
+          {progressError && <p role="alert" className="mt-3 rounded-xl bg-amber-100 p-3 text-sm font-semibold text-terracotta">{progressError}</p>}
+          {progressState && <div className="mt-3 rounded-2xl bg-[#eff6eb] p-4 text-sm text-forest"><p className="font-bold">{t('agent.progressSummary')}</p><ul className="mt-2 list-disc pl-5">{progressState.entries.map((entry, index) => <li key={`${entry.surahId}-${entry.startAyah}-${index}`}>{entry.type === 'new' ? t('agent.progressNew') : t('agent.progressReview')} · QS. {entry.surahId} · {rangeLabel(entry.startAyah, entry.endAyah)}</li>)}</ul>{progressState.unrecognised.length > 0 && <p className="mt-2 text-terracotta">{t('agent.progressUnrecognised', { items: progressState.unrecognised.join(', ') })}</p>}{progressState.clarification && <p className="mt-2 font-semibold text-terracotta">{progressState.clarification}</p>}{!progressState.clarification && progressState.entries.length > 0 && <div className="mt-3 flex gap-2"><button type="button" onClick={confirmProgress} disabled={progressLoading} className="primary-button flex-1">{t('agent.progressConfirm')}</button><button type="button" onClick={() => setProgressState(null)} className="secondary-button flex-1">{t('agent.progressEdit')}</button></div>}</div>}
           {aiStatus && <p className="coach-ai-status" role="status">{aiStatus}</p>}
           <p className="coach-note">{t('agent.advice')}</p>
         </div>
@@ -1234,11 +1274,11 @@ function CoachConversation({ profile, targets, memories, checkin, locale: reques
   </>
 }
 
-function FloatingCoach({ profile, targets, memories, locale, onAdd, onStart, onOpen = () => window.dispatchEvent(new Event('wali-tahfiz-open-audio')) }) {
+function FloatingCoach({ profile, targets, memories, locale, checkin, onSave, autoOpen, onAutoOpen, onApplyProgress, onAdd, onStart, onOpen = () => window.dispatchEvent(new Event('wali-tahfiz-open-audio')) }) {
   return <>
     <div className="fixed bottom-4 inset-x-0 mx-auto max-w-md px-4 z-50 pointer-events-none flex items-center justify-between gap-3">
       <AudioLibraryShortcut onOpen={onOpen}/>
-      <CoachConversation profile={profile} targets={targets} memories={memories} locale={locale} onAdd={onAdd} onStart={onStart}/>
+      <CoachConversation profile={profile} targets={targets} memories={memories} locale={locale} checkin={checkin} onSave={onSave} autoOpen={autoOpen} onAutoOpen={onAutoOpen} onApplyProgress={onApplyProgress} onAdd={onAdd} onStart={onStart}/>
     </div>
   </>
 }
@@ -1369,6 +1409,13 @@ function Home({ profile, family, locale = DEFAULT_LOCALE, onSelectChild, setting
     if (hasReviewTargetForToday(targets, memory.id, todayKey())) return
     saveTarget({ id: makeId('target'), type: 'review', surahId: memory.surahId, startAyah: memory.startAyah, endAyah: memory.endAyah, status: 'todo', createdAt: new Date().toISOString(), memoryId: memory.id })
   }
+  const applyProgress = async (entries) => {
+    await applyValidatedProgress({ database: db, childId: profile.id, entries, catalogue: QURAN_CATALOGUE, memories, today: todayKey(), makeId })
+    const [nextTargets, nextMemories] = await Promise.all([getTargetsForDay(profile.id, todayKey()), db.memories.where('childId').equals(profile.id).toArray()])
+    setTargets(nextTargets.sort((first, second) => String(second.createdAt || '').localeCompare(String(first.createdAt || ''))))
+    setMemories(nextMemories)
+    await completeTodayCoachAction(profile.id)
+  }
   if (!isHydrated) return <main className="page-root pb-12"><div className="mx-auto max-w-6xl px-4 pt-6 sm:px-6 lg:px-8 lg:pt-10" aria-busy="true"><div className="h-36 animate-pulse rounded-[32px] bg-forest/90"/><div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px]"><section className="h-80 animate-pulse rounded-[32px] bg-white/90 dark:bg-[#16211E]"/><aside className="h-80 animate-pulse rounded-[32px] bg-white/90 dark:bg-[#16211E]"/></div><p className="sr-only">Memuat data hafalan {profile.name}…</p></div></main>
   return <main className="page-root pb-12"><div className="mx-auto max-w-6xl px-4 pt-6 sm:px-6 lg:px-8 lg:pt-10">
     <header className="home-hero"><div className="pointer-events-none absolute -right-10 -top-14 h-44 w-44 rounded-full bg-white/10"/><div className="home-hero-top"><p className="flex min-w-0 items-center gap-1.5 text-sm font-semibold text-white/75"><img src="/icons/app-icon.svg" alt="" className="home-hero-brand-mark"/><span>Wali Tahfiz</span><span className="text-white/35">·</span><Sparkles size={15} className="shrink-0"/> {t('home.greeting', { role: profile.role })}</p><button type="button" onClick={settings} aria-label={t('common.settings')} className="home-hero-settings"><Settings size={21}/></button></div><div className="home-hero-copy"><span className="mb-3 inline-flex w-fit items-center gap-1.5 rounded-full bg-white/15 px-3 py-1 text-[11px] font-bold uppercase tracking-[.12em] text-white/90">🌚 Education · AI untuk belajar</span><h1 className="font-display">{t('home.title', { name: profile.name })}</h1><p>{t('home.subtitle')}</p></div><div className="home-hero-child"><ChildSwitcher family={family} onSelect={onSelectChild} onManage={settings}/></div></header>
@@ -1385,7 +1432,7 @@ function Home({ profile, family, locale = DEFAULT_LOCALE, onSelectChild, setting
         )}
         {todayTargets.length ? <>{newTargets.length > 0 && <TargetGroup type="new" targets={newTargets} onStart={(item) => item.type === 'review' ? openReview(memories.find((memory) => memory.id === item.memoryId)) : setStartedTarget(item.id)} onComplete={completeTarget} onDelete={deleteTarget}/>} {reviewTargets.length > 0 && <TargetGroup type="review" targets={reviewTargets} onStart={(item) => item.type === 'review' ? openReview(memories.find((memory) => memory.id === item.memoryId)) : setStartedTarget(item.id)} onComplete={completeTarget} onDelete={deleteTarget}/>}</> : reviewRecommendations.length === 0 && <div className="rounded-[24px] bg-amber-50 px-5 py-10 text-center dark:bg-emerald-950/60"><span className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-white text-forest dark:bg-[#16211E]"><Plus size={22}/></span><h3 className="mt-3 font-display text-xl text-forest">{t('home.noTargets')}</h3><p className="text-muted mt-1 text-sm">{t('home.noTargetsBody')}</p><button type="button" onClick={() => setShowAdd(true)} className="mt-4 min-h-11 font-bold text-terracotta">{t('home.firstTarget')}</button></div>}
       </div></section>
-      <aside className="glass-card p-5 lg:p-6"><div className="flex items-start justify-between"><div><p className="step-label border border-emerald-800/50 bg-emerald-950/80 text-emerald-300">{t('home.memories')}</p><h2 className="font-display mt-2 text-2xl font-semibold text-stone-100 dark:text-stone-100">{t('home.childMemories', { name: profile.name })}</h2></div><Clock3 className="text-terracotta" size={22}/></div><p className="mt-1 text-sm leading-relaxed text-stone-400 dark:text-stone-400">{t('home.memoriesBody')}</p><div className="mt-5 space-y-3">{memories.length ? memories.map((memory) => { const item = surahFor(memory.surahId); const due = reviewDueState(memory, todayKey()); return <div key={memory.id} className="memory-card"><div className="flex items-start justify-between gap-2"><div><b className="block text-forest">{item?.name || t('common.surah')} · {rangeLabel(memory.startAyah, memory.endAyah)}</b><span className={`mt-1 inline-flex items-center gap-1 text-xs font-bold ${due.status === 'due' ? 'text-terracotta' : 'text-slate-500'}`}>{due.status === 'due' && <Sparkles size={12}/>} {dueLabel(memory, t)}</span></div><button type="button" onClick={() => openReview(memory)} aria-label={t('home.playRandom', { surah: item?.name || t('common.surah') })} className="icon-button h-10 w-10 bg-white"><Shuffle size={17}/></button></div><button type="button" onClick={() => addReviewTarget(memory)} className="mt-3 flex min-h-10 w-full items-center justify-center gap-1.5 rounded-xl bg-emerald-600 text-sm font-bold text-white transition-[transform,background-color] hover:bg-emerald-500 active:scale-[0.96]"><Plus size={15}/> {t('home.addToday')}</button></div> }) : <p className="rounded-2xl border border-stone-200/80 bg-stone-100/80 p-6 text-center dark:border-stone-800/80 dark:bg-stone-900/60">{t('home.noMemories', { name: profile.name })}</p>}</div></aside></div></div><FloatingCoach key={profile.id} profile={profile} targets={targets} memories={memories} checkin={checkin} autoOpen={autoOpenCoach} onAutoOpen={onAutoCoachOpened} onSave={saveCheckin} onOpen={() => window.dispatchEvent(new Event('wali-tahfiz-open-audio'))} onAdd={({ memory, surahId } = {}) => { if (memory) addReviewTarget(memory); else { setSuggestedSurahId(surahId || '1'); setShowAdd(true) } }} onStart={(target) => target.type === 'review' ? openReview(memories.find((memory) => memory.id === target.memoryId)) : setStartedTarget(target.id)}/>{showAdd && <AddTargetSheet memories={memories} initialSurahId={suggestedSurahId} onSave={saveTarget} onClose={() => { setShowAdd(false); setSuggestedSurahId('1') }}/>}</main>
+      <aside className="glass-card p-5 lg:p-6"><div className="flex items-start justify-between"><div><p className="step-label border border-emerald-800/50 bg-emerald-950/80 text-emerald-300">{t('home.memories')}</p><h2 className="font-display mt-2 text-2xl font-semibold text-stone-100 dark:text-stone-100">{t('home.childMemories', { name: profile.name })}</h2></div><Clock3 className="text-terracotta" size={22}/></div><p className="mt-1 text-sm leading-relaxed text-stone-400 dark:text-stone-400">{t('home.memoriesBody')}</p><div className="mt-5 space-y-3">{memories.length ? memories.map((memory) => { const item = surahFor(memory.surahId); const due = reviewDueState(memory, todayKey()); return <div key={memory.id} className="memory-card"><div className="flex items-start justify-between gap-2"><div><b className="block text-forest">{item?.name || t('common.surah')} · {rangeLabel(memory.startAyah, memory.endAyah)}</b><span className={`mt-1 inline-flex items-center gap-1 text-xs font-bold ${due.status === 'due' ? 'text-terracotta' : 'text-slate-500'}`}>{due.status === 'due' && <Sparkles size={12}/>} {dueLabel(memory, t)}</span></div><button type="button" onClick={() => openReview(memory)} aria-label={t('home.playRandom', { surah: item?.name || t('common.surah') })} className="icon-button h-10 w-10 bg-white"><Shuffle size={17}/></button></div><button type="button" onClick={() => addReviewTarget(memory)} className="mt-3 flex min-h-10 w-full items-center justify-center gap-1.5 rounded-xl bg-emerald-600 text-sm font-bold text-white transition-[transform,background-color] hover:bg-emerald-500 active:scale-[0.96]"><Plus size={15}/> {t('home.addToday')}</button></div> }) : <p className="rounded-2xl border border-stone-200/80 bg-stone-100/80 p-6 text-center dark:border-stone-800/80 dark:bg-stone-900/60">{t('home.noMemories', { name: profile.name })}</p>}</div></aside></div></div><FloatingCoach key={profile.id} profile={profile} targets={targets} memories={memories} checkin={checkin} autoOpen={autoOpenCoach} onAutoOpen={onAutoCoachOpened} onSave={saveCheckin} onApplyProgress={applyProgress} onOpen={() => window.dispatchEvent(new Event('wali-tahfiz-open-audio'))} onAdd={({ memory, surahId } = {}) => { if (memory) addReviewTarget(memory); else { setSuggestedSurahId(surahId || '1'); setShowAdd(true) } }} onStart={(target) => target.type === 'review' ? openReview(memories.find((memory) => memory.id === target.memoryId)) : setStartedTarget(target.id)}/>{showAdd && <AddTargetSheet memories={memories} initialSurahId={suggestedSurahId} onSave={saveTarget} onClose={() => { setShowAdd(false); setSuggestedSurahId('1') }}/>}</main>
 }
 
 function AudioLibraryShortcut({ onOpen }) {

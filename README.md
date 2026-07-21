@@ -79,10 +79,10 @@ cp .env.example .env.local
 OPENAI_API_KEY=your_openai_api_key_here
 
 # Optional: model used by Teman Hafalan (defaults to GPT-5.6)
-OPENAI_MODEL=gpt-5.6
+OPENAI_MODEL=gpt-5.2
 ```
 
-`npm run dev` serves `/api/daily-coach` through Vite. In production, the same path is handled by `api/daily-coach.js`. Do not put the key in frontend code or commit `.env` files.
+`npm run dev` serves `/api/daily-coach` and `/api/log-progress` through Vite. In production, Vercel automatically deploys both handlers from `api/daily-coach.js` and `api/log-progress.js`; the existing rewrite keeps `/api/*` requests routed to those serverless functions. Do not put the key in frontend code or commit `.env` files.
 
 ## Language and appearance
 
@@ -113,10 +113,10 @@ Key implementation decisions were made with a human-in-the-loop:
 - Keep family and child data local in IndexedDB, with explicit JSON backup and restore.
 - Use small Listen → Repeat → Connect sessions and spaced reviews instead of competitive streaks.
 - Provide a useful local companion fallback so the core experience does not depend on an AI service.
-- Keep the OpenAI key server-side behind `/api/daily-coach`; never expose it in browser code.
-- Use a configurable model through `OPENAI_MODEL`, defaulting to GPT-5.6 for the AI companion.
+- Keep the OpenAI key server-side behind `/api/daily-coach` and `/api/log-progress`; never expose it in browser code.
+- Use a configurable model through `OPENAI_MODEL`, defaulting to `gpt-5.2` for the AI companion.
 
-GPT-5.6 is used by the optional Memorisation Companion to turn the app’s local recommendation and child-session context into one short, gentle suggestion. The model is constrained to the locally selected action, uses structured JSON output, and is not used to store family conversations or make medical claims. Codex was used as the engineering partner around that model: inspecting the codebase, implementing and reviewing changes, writing tests, and verifying the production build.
+`gpt-5.2` is used by the optional Memorisation Companion to turn the app’s local recommendation and child-session context into one short, gentle suggestion. The model is constrained to the locally selected action, uses structured JSON output, and is not used to store family conversations or make medical claims. Codex was used as the engineering partner around that model: inspecting the codebase, implementing and reviewing changes, writing tests, and verifying the production build.
 
 ## License
 

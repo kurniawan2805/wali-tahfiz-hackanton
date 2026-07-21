@@ -1,13 +1,18 @@
 import { defineConfig, loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
 import dailyCoach from './api/daily-coach.js'
+import logProgress from './api/log-progress.js'
 
 function localApi() {
   return {
     name: 'wali-tahfiz-local-api',
     apply: 'serve',
     configureServer(server) {
-      server.middlewares.use('/api/daily-coach', async (request, response) => {
+      const handlers = { '/api/daily-coach': dailyCoach, '/api/log-progress': logProgress }
+      server.middlewares.use((request, response, next) => {
+        const handler = handlers[request.url?.split('?')[0]]
+        if (!handler) return next()
+        return (async () => {
         const chunks = []
         for await (const chunk of request) chunks.push(chunk)
         try {
@@ -26,7 +31,15 @@ function localApi() {
             response.end(JSON.stringify(payload))
           },
         }
-        await dailyCoach(request, apiResponse)
+        await handler(request, apiResponse)
+        })().catch((error) => {
+          if (!response.writableEnded) {
+            response.statusCode = 500
+            response.setHeader('Content-Type', 'application/json')
+            response.end(JSON.stringify({ error: 'Local API request failed.' }))
+          }
+          console.error('[local-api]', error)
+        })
       })
     },
   }
