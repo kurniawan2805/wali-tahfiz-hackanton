@@ -28,7 +28,7 @@ const audioSurahs = [
   { id: '112', name: 'Al-Ikhlas', arabic: 'ٱلْإِخْلَاص', ayat: 4, group: 'juz30' }, { id: '113', name: 'Al-Falaq', arabic: 'ٱلْفَلَق', ayat: 5, group: 'juz30' },
   { id: '114', name: 'An-Nas', arabic: 'ٱلنَّاس', ayat: 6, group: 'juz30' },
 ]
-const rangeLabel = (start, end) => `Ayat ${start}–${end}`
+const rangeLabel = (start, end) => `Verse ${start}–${end}`
 const surahFor = (id) => audioSurahs.find((surah) => surah.id === id) || surahs.find((surah) => surah.id === id)
 
 const stripBismillah = (text, surahId, ayahNumber) => {

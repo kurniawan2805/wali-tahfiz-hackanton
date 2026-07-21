@@ -10,23 +10,32 @@ The app is not here to rush a child or replace the person beside them. It gives 
 
 ## What it can do
 
+### Family and profiles
+
 - Set up one family account with a parent or guardian greeting.
 - Add, edit, switch between, and remove child profiles. Each child keeps their own targets, memorised ranges, practice settings, and review history.
 - Mark surahs a child already knows during setup or later in Settings.
+- Use the app in Bahasa Indonesia or English, choose light or dark mode, and export, import, or reset local family data when needed.
+
+### Memorisation and review
+
 - Create a new memorisation target for one verse or a verse range in Al-Fatihah or Juz 30.
-- Guide new memorisation in three simple steps: **Listen (talaqqi)**, **Repeat (tikrar)**, and **Connect (rabt)**.
-- Save an unfinished practice session so it can be continued later.
-- Split long connection practice into smaller blocks, so a long surah does not become one overwhelming screen.
-- Save completed targets as memorised ranges and suggest reviews at a spaced rhythm: **1, 3, 7, 14, and 30 days**.
+- Follow three simple practice steps: **Listen (talaqqi)**, **Repeat (tikrar)**, and **Connect (rabt)**.
+- Save an unfinished session and split long connection practice into smaller, manageable blocks.
+- Save completed targets as memorised ranges and receive spaced review suggestions at **1, 3, 7, 14, and 30 days**.
 - Add a suggested review to today’s plan, practise with a random “what comes next?” prompt, then choose **Smoothly done** or **Try again**.
+
+### Audio and listening
+
 - Listen to Al-Fatihah and every surah in Juz 30, with Arabic text and an Indonesian or English translation.
-- Search the listening catalogue by surah name, number, or Arabic name.
-- Choose a reciter, repeat each verse, set a verse range, repeat that range, and move through the audio with play, pause, previous, next, and replay controls.
-- Use the Memorisation Companion for a small, caring suggestion based on the child’s mood, today’s plan, and reviews that are ready. It can suggest a pause, listening, review, or one small new target.
-- Get useful local companion advice even when the optional AI service is not configured or cannot be reached.
-- Use the app in Bahasa Indonesia or English, and choose light or dark mode.
-- Export family data as a JSON backup, import it on another device, or reset local data when needed.
-- Install the app from the browser. Its basic app shell can open offline.
+- Search the catalogue by surah name, number, or Arabic name.
+- Choose a reciter, repeat individual verses or a range, and use play, pause, previous, next, and replay controls.
+
+### Memorisation Companion
+
+- Receive one small, caring suggestion based on the child’s mood, today’s plan, and reviews that are ready—such as a pause, listening session, review, or small new target.
+- Keep receiving useful local advice when the optional AI service is not configured or cannot be reached.
+- Install the app from the browser; its basic app shell can open offline.
 
 ## Privacy and data
 
@@ -78,7 +87,7 @@ cp .env.example .env.local
 ```env
 OPENAI_API_KEY=your_openai_api_key_here
 
-# Optional: model used by Teman Hafalan (defaults to GPT-5.6)
+# Optional: model used by Teman Hafalan (the server falls back to gpt-4.1-nano if unset)
 OPENAI_MODEL=gpt-5.2
 ```
 
@@ -123,9 +132,9 @@ Key implementation decisions were made with a human-in-the-loop:
 - Use small Listen → Repeat → Connect sessions and spaced reviews instead of competitive streaks.
 - Provide a useful local companion fallback so the core experience does not depend on an AI service.
 - Keep the OpenAI key server-side behind `/api/daily-coach` and `/api/log-progress`; never expose it in browser code.
-- Use a configurable model through `OPENAI_MODEL`, defaulting to `gpt-5.2` for the AI companion.
+- Use a configurable model through `OPENAI_MODEL`; the sample configuration uses `gpt-5.2`, while the server falls back to `gpt-4.1-nano` when it is unset.
 
-`gpt-5.2` is used by the optional Memorisation Companion to turn the app’s local recommendation and child-session context into one short, gentle suggestion. The model is constrained to the locally selected action, uses structured JSON output, and is not used to store family conversations or make medical claims. Codex was used as the engineering partner around that model: inspecting the codebase, implementing and reviewing changes, writing tests, and verifying the production build.
+The optional Memorisation Companion uses the configured model (the sample configuration uses `gpt-5.2`) to turn the app’s local recommendation and child-session context into one short, gentle suggestion. The model is constrained to the locally selected action, uses structured JSON output, and is not used to store family conversations or make medical claims. Codex was used as the engineering partner around that model: inspecting the codebase, implementing and reviewing changes, writing tests, and verifying the production build.
 
 ## License
 
