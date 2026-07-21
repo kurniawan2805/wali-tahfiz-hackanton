@@ -59,6 +59,12 @@ To run the test suite:
 npm test
 ```
 
+## Sample data
+
+No database or hosted account is required. On first launch, use the setup screen to add a guardian and a child. You can mark a few known surahs, create a small target such as Al-Fatihah verses 1–2, and try the Listen, Repeat, Connect, and Review flows.
+
+For repeatable device-to-device testing, use **Settings → Data backup → Export backup**, then import that JSON file during setup on another browser or device. The app keeps this data in that browser’s IndexedDB.
+
 ## Optional AI companion
 
 The AI version of the Memorisation Companion is optional. Without it, the app still gives local gentle suggestions.
@@ -97,3 +103,21 @@ Supported values are `id` and `en`. Families can always change the language and 
 - Web App Manifest and service worker for installation and offline support
 
 For the full product and interface guidance, see [design.md](design.md).
+
+## How Codex and GPT-5.6 were used
+
+Codex accelerated the workflow from product idea to a working, testable PWA. It helped inspect the existing React code, map the real feature set, refine the interface language, improve the Qur’an listening experience, update the product and design documentation, run the test/build checks, and prepare the repository for review.
+
+Key implementation decisions were made with a human-in-the-loop:
+
+- Keep family and child data local in IndexedDB, with explicit JSON backup and restore.
+- Use small Listen → Repeat → Connect sessions and spaced reviews instead of competitive streaks.
+- Provide a useful local companion fallback so the core experience does not depend on an AI service.
+- Keep the OpenAI key server-side behind `/api/daily-coach`; never expose it in browser code.
+- Use a configurable model through `OPENAI_MODEL`, defaulting to GPT-5.6 for the AI companion.
+
+GPT-5.6 is used by the optional Memorisation Companion to turn the app’s local recommendation and child-session context into one short, gentle suggestion. The model is constrained to the locally selected action, uses structured JSON output, and is not used to store family conversations or make medical claims. Codex was used as the engineering partner around that model: inspecting the codebase, implementing and reviewing changes, writing tests, and verifying the production build.
+
+## License
+
+This project is released under the [MIT License](LICENSE).
