@@ -30,7 +30,7 @@ export function checkinReadiness(checkin) {
 }
 
 export function readinessForCondition(condition) {
-  if (condition === 'siap') return 'ready'
+  if (condition === 'siap' || condition === 'ingin-main' || condition === 'lelah') return 'ready'
   return condition ? 'not_ready' : 'unanswered'
 }
 

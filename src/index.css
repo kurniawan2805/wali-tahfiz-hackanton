@@ -27,11 +27,38 @@
 @tailwind utilities;
 
 @layer base {
+  :root {
+    --color-canvas: 43 100% 97%;
+    --color-surface: 0 0% 100%;
+    --color-surface-raised: 86 33% 98%;
+    --color-surface-muted: 106 29% 95%;
+    --color-forest: 144 37% 31%;
+    --color-sage: 120 30% 88%;
+    --color-peach: 32 100% 88%;
+    --color-terracotta: 21 47% 40%;
+    --color-ink: 153 20% 20%;
+    --color-muted: 155 11% 36%;
+    --color-border: 126 23% 78%;
+  }
+  .dark {
+    --color-canvas: 154 22% 9%;
+    --color-surface: 155 20% 13%;
+    --color-surface-raised: 155 18% 16%;
+    --color-surface-muted: 153 17% 19%;
+    --color-forest: 137 42% 70%;
+    --color-sage: 140 23% 28%;
+    --color-peach: 33 75% 72%;
+    --color-terracotta: 20 72% 72%;
+    --color-ink: 126 25% 93%;
+    --color-muted: 139 13% 74%;
+    --color-border: 149 15% 29%;
+  }
   * { -webkit-tap-highlight-color: transparent; }
-  html { -webkit-font-smoothing: antialiased; }
-  body { @apply min-h-screen bg-cream font-sans text-slate-700; text-wrap: pretty; background-image: radial-gradient(circle at 8% 0%, rgba(220,235,220,.65), transparent 30%), radial-gradient(circle at 95% 20%, rgba(255,229,196,.4), transparent 25%); }
+  html { @apply min-h-screen bg-[#FDFBF7] text-stone-900 dark:bg-[#0C1311] dark:text-stone-100; -webkit-font-smoothing: antialiased; }
+  body { @apply min-h-screen bg-[#FDFBF7] font-sans text-stone-900 transition-colors duration-200 dark:bg-[#0C1311] dark:text-stone-100; text-wrap: pretty; background-image: radial-gradient(circle at 8% 0%, hsl(var(--color-sage) / .62), transparent 30%), radial-gradient(circle at 95% 20%, hsl(var(--color-peach) / .28), transparent 25%); }
   h1, h2, h3 { text-wrap: balance; }
   button, select, input { @apply focus:outline-none focus-visible:ring-4 focus-visible:ring-forest/20; }
+  input, select { color: hsl(var(--color-ink)); }
   /* Tailwind's .font-serif utility is emitted after this layer. Match it here so
      Qur'an text always uses the embedded Qur'anic typeface, not the system serif. */
   [dir='rtl'], .font-serif[dir='rtl'] {
@@ -44,8 +71,17 @@
 }
 
 @layer components {
+  .font-arabic { font-family: 'Amiri Quran', 'Amiri', serif; font-synthesis: none; font-variant-ligatures: common-ligatures contextual; text-rendering: optimizeLegibility; }
   .font-display { font-family: 'Fredoka', sans-serif; }
-  .app-page { @apply min-h-screen bg-cream pb-12; }
+  .app-page { @apply min-h-screen bg-[#FDFBF7] pb-12 text-stone-900 dark:bg-[#0C1311] dark:text-stone-100; }
+  .page-root { @apply min-h-screen bg-[#FDFBF7] text-stone-900 dark:bg-[#0C1311] dark:text-stone-100; }
+  .text-muted { @apply text-stone-600 dark:text-stone-300; }
+  .page-root .glass-card h2[class~="text-stone-100"] { color: rgb(28 25 23); }
+  .page-root .glass-card > p[class~="text-stone-400"] { color: rgb(87 83 78); }
+  .dark .page-root .glass-card h2[class~="text-stone-100"] { color: rgb(245 245 244); }
+  .dark .page-root .glass-card > p[class~="text-stone-400"] { color: rgb(168 162 158); }
+  .badge-new { @apply bg-amber-100 text-amber-900 dark:bg-amber-950/70 dark:text-amber-100; }
+  .badge-review { @apply bg-emerald-100 text-emerald-900 dark:bg-emerald-900/80 dark:text-emerald-100; }
   .page-shell { @apply mx-auto px-4 pt-6 sm:px-6 sm:pt-9; }
   .page-shell-narrow { @apply max-w-md; }
   .page-shell-onboarding { @apply max-w-xl; }
@@ -60,7 +96,8 @@
   .page-eyebrow { @apply text-[11px] font-bold uppercase tracking-[.14em] text-forest/70; }
   .page-title { @apply font-display text-3xl leading-tight text-forest; }
   .page-action-button { @apply flex min-h-11 items-center gap-2 rounded-2xl bg-forest px-3.5 text-sm font-bold text-white shadow-sm shadow-forest/20 transition-[transform,background-color] duration-200 hover:bg-[#39684d] active:scale-[0.96]; }
-  .glass-card { @apply rounded-[32px] border border-white/90 bg-white/95 shadow-soft; box-shadow: 0 18px 55px rgba(71,119,92,.10), 0 2px 5px rgba(71,119,92,.04); }
+  .glass-card { @apply rounded-[32px] border border-stone-200/60 bg-white text-stone-900 shadow-sm dark:border-emerald-900/40 dark:bg-[#0C1311] dark:text-stone-100 dark:shadow-none; box-shadow: 0 18px 55px rgba(71,119,92,.10), 0 2px 5px rgba(71,119,92,.04); }
+  .dark .glass-card { box-shadow: none; }
   .page-card { @apply rounded-[30px]; }
   .page-card-hero { @apply bg-forest px-6 py-5 text-white; }
   .onboarding-page { @apply pb-6 sm:pb-10; }
@@ -70,59 +107,59 @@
   .onboarding-hero-copy { @apply relative z-10 flex min-w-0 items-center gap-3; }
   .onboarding-hero-mark { @apply flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-white/15 shadow-[inset_0_1px_0_rgba(255,255,255,.14)]; }
   .onboarding-hero-mark img { @apply h-full w-full; }
-  .onboarding-progress { @apply flex shrink-0 items-center gap-1.5; }
-  .onboarding-progress li { @apply relative z-10 flex h-8 w-8 items-center justify-center rounded-full bg-white/20 text-xs font-bold text-white/70; }
-  .onboarding-progress li::after { content: ''; @apply ml-1.5 h-1.5 w-4 rounded-full bg-white/20; }
-  .onboarding-progress li:last-child::after { @apply hidden; }
-  .onboarding-progress .onboarding-progress-item-active { @apply bg-peach text-terracotta; }
-  .onboarding-progress .onboarding-progress-item-active::after { @apply bg-peach; }
+  .onboarding-progress { @apply flex shrink-0 items-center gap-2; }
+  .onboarding-progress li { @apply flex h-8 w-8 items-center justify-center rounded-full border border-stone-300 bg-stone-100 text-sm font-bold text-stone-600 dark:border-emerald-700/60 dark:bg-emerald-950/80 dark:text-emerald-300; }
+  .onboarding-progress .onboarding-progress-item-active { @apply border-0 bg-emerald-500 text-stone-950 shadow-md; }
   .onboarding-content { @apply p-5 sm:p-7; }
-  .onboarding-heading { @apply mt-3 font-display text-2xl leading-tight text-forest sm:text-[28px]; }
-  .onboarding-description { @apply mt-2 max-w-lg text-sm leading-relaxed text-slate-500; }
+  .onboarding-heading { @apply mt-3 font-display text-2xl leading-tight text-stone-900 dark:text-stone-100 sm:text-[28px]; }
+  .onboarding-description { @apply mt-2 max-w-lg text-sm leading-relaxed text-stone-600 dark:text-stone-300; }
   .onboarding-choice-group { @apply mt-6; }
-  .onboarding-section-label { @apply mb-2 text-xs font-bold uppercase tracking-[.12em] text-slate-400; }
+  .onboarding-section-label { @apply mb-2 text-xs font-bold uppercase tracking-[.12em] text-stone-600 dark:text-stone-400; }
   .onboarding-saved-children { @apply mt-6; }
-  .onboarding-child-form { @apply mt-6 rounded-[24px] bg-[#f7faf4] p-4 sm:p-5; box-shadow: inset 0 1px 0 rgb(255 255 255 / 75%); }
-  .onboarding-form-title { @apply mb-4 text-sm font-bold text-forest; }
-  .onboarding-footer { @apply border-t border-sage/70 bg-[#fbfdf8] p-5 sm:px-7; }
+  .onboarding-child-form { @apply mt-6 rounded-2xl border border-stone-200 bg-white p-6 text-stone-900 shadow-xl dark:border-emerald-900/40 dark:bg-stone-900/80 dark:text-stone-100; }
+  .onboarding-child-form .block > span:first-child { @apply mb-1.5 text-sm font-medium text-stone-600 dark:text-stone-300; }
+  .onboarding-form-title { @apply mb-4 text-lg font-semibold text-emerald-700 dark:text-emerald-300; }
+  .onboarding-footer { @apply border-t border-stone-200 bg-white/90 p-4 backdrop-blur-md dark:border-emerald-900/40 dark:bg-[#0C1311]/90 sm:px-7; }
   .onboarding-actions { @apply flex gap-3; }
-  .onboarding-back-button { @apply !flex-none !px-3.5; }
-  .onboarding-restore { @apply mt-6 grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 rounded-[22px] bg-[#eff6eb] p-3.5; box-shadow: inset 0 1px 0 rgb(255 255 255 / 75%); }
-  .onboarding-restore-icon { @apply flex h-10 w-10 items-center justify-center rounded-xl bg-white text-forest shadow-sm; }
-  .onboarding-restore h3 { @apply text-sm; }
-  .onboarding-restore p { @apply mt-0.5 text-xs leading-relaxed text-slate-500; }
-  .onboarding-restore-button { @apply flex min-h-10 items-center justify-center rounded-xl bg-white px-3 text-sm font-bold text-forest shadow-sm transition-[transform,background-color] duration-200 hover:bg-[#fbfdf8] active:scale-[0.96]; }
-  .onboarding-restore-status { @apply col-span-3 rounded-xl bg-white px-3 py-2 font-semibold text-terracotta; }
+  .onboarding-back-button { @apply flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-stone-300 bg-stone-50 p-3 text-stone-600 transition-[transform,background-color] hover:bg-stone-100 active:scale-[0.96] dark:border-stone-800 dark:bg-stone-900 dark:text-stone-300 dark:hover:bg-stone-800; }
+  .onboarding-start-button { @apply flex flex-1 items-center justify-center gap-2 rounded-xl bg-emerald-600 py-3 font-semibold text-white shadow-lg shadow-emerald-950/50 transition-[transform,background-color,opacity] hover:bg-emerald-500 active:scale-[0.96]; }
+  .onboarding-save-child-button { @apply mt-4 flex w-full items-center justify-center gap-2 rounded-xl border border-stone-300 bg-stone-100 py-3 text-sm font-medium text-stone-700 transition-[transform,background-color,opacity] hover:bg-stone-200 active:scale-[0.96] dark:border-stone-700 dark:bg-stone-800 dark:text-stone-200 dark:hover:bg-stone-700; }
+  .onboarding-restore { @apply mt-6 grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 rounded-[22px] border border-stone-200 bg-white p-3.5 text-stone-900 dark:border-emerald-900/40 dark:bg-stone-900/60 dark:text-stone-200; }
+  .onboarding-restore-icon { @apply flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300; }
+  .onboarding-restore h3 { @apply text-sm font-bold text-stone-900 dark:text-stone-200; }
+  .onboarding-restore p { @apply mt-0.5 text-xs leading-relaxed text-stone-600 dark:text-stone-400; }
+  .onboarding-restore-button { @apply flex min-h-10 items-center justify-center rounded-xl bg-emerald-100 px-3 text-sm font-bold text-emerald-800 transition-[transform,background-color] duration-200 hover:bg-emerald-200 active:scale-[0.96] dark:bg-emerald-900/80 dark:text-emerald-200 dark:hover:bg-emerald-800; }
+  .onboarding-restore-status { @apply col-span-3 rounded-xl bg-emerald-100 px-3 py-2 font-semibold text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-200; }
   .step-label { @apply inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[11px] font-bold tracking-[0.14em]; }
   .phase-panel { animation: phase-in 320ms cubic-bezier(0.2, 0, 0, 1); }
-  .input-field { @apply w-full rounded-2xl border border-sage bg-[#fbfdf8] px-4 py-3.5 text-base font-semibold text-slate-700 placeholder:font-normal placeholder:text-slate-400; }
+  .input-field { @apply w-full rounded-xl border border-stone-300 bg-stone-50 px-4 py-2.5 text-sm text-stone-900 placeholder:text-stone-500 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 dark:border-stone-800 dark:bg-stone-950/70 dark:text-stone-100; }
   .primary-button { @apply flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl bg-forest px-5 py-3.5 text-base font-bold text-white shadow-lg shadow-forest/20 transition-[transform,background-color,opacity] duration-200 hover:bg-[#39684d] active:scale-[0.96]; }
-  .secondary-button { @apply flex min-h-12 flex-1 items-center justify-center gap-2 rounded-2xl border border-sage bg-white px-4 py-3 font-bold text-forest transition-[transform,background-color] duration-200 hover:bg-[#f7faf4] active:scale-[0.96]; }
-  .icon-button { @apply flex h-11 w-11 items-center justify-center rounded-2xl bg-white text-forest shadow-sm transition-transform duration-200 active:scale-[0.96]; }
-  .pwa-install-prompt { @apply fixed bottom-5 right-4 z-40 flex max-w-[calc(100vw-2rem)] items-center gap-3 rounded-[22px] bg-white p-3.5 shadow-[0_18px_45px_rgba(71,119,92,.20),0_2px_6px_rgba(71,119,92,.08)]; animation: pwa-install-in 260ms cubic-bezier(.2,0,0,1); }
-  .pwa-install-icon { @apply flex h-11 w-11 shrink-0 items-center justify-center rounded-[14px] bg-[#eff6eb] text-forest; }
-  .pwa-install-button { @apply flex min-h-11 shrink-0 items-center justify-center rounded-xl bg-forest px-3.5 text-sm font-bold text-white transition-[transform,background-color] duration-200 hover:bg-[#39684d] active:scale-[0.96]; }
-  .pwa-install-close { @apply flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-slate-500 transition-[transform,background-color,color] duration-200 hover:bg-[#f7faf4] hover:text-forest active:scale-[0.96]; }
-  .audio-control { @apply flex h-11 w-11 items-center justify-center rounded-2xl bg-[#f7faf4] text-forest transition-[transform,background-color] active:scale-[0.96]; }
-  .player-main-button { @apply flex h-12 w-12 shrink-0 items-center justify-center rounded-[18px] bg-white text-forest shadow-sm transition-[transform,background-color] duration-200 hover:bg-[#fffaf2] active:scale-[0.96]; }
+  .secondary-button { @apply flex min-h-12 flex-1 items-center justify-center gap-2 rounded-2xl border border-sage bg-white px-4 py-3 font-bold text-forest transition-[transform,background-color] duration-200 hover:bg-[#f7faf4] active:scale-[0.96] dark:border-emerald-900 dark:bg-[#16211E] dark:hover:bg-emerald-950/60; }
+  .icon-button { @apply flex h-11 w-11 items-center justify-center rounded-2xl bg-white text-forest shadow-sm transition-transform duration-200 active:scale-[0.96] dark:bg-[#16211E] dark:shadow-none; }
+  .pwa-install-prompt { @apply fixed bottom-24 right-4 z-40 flex max-w-[calc(100vw-2rem)] items-center gap-3 rounded-2xl border border-stone-800 bg-stone-900/90 p-3.5 text-stone-100 shadow-2xl backdrop-blur-md dark:border-emerald-900/40 dark:bg-[#121D1A]; animation: pwa-install-in 260ms cubic-bezier(.2,0,0,1); }
+  .pwa-install-icon { @apply flex h-11 w-11 shrink-0 items-center justify-center rounded-[14px] bg-emerald-950/80 text-emerald-300; }
+  .pwa-install-button { @apply flex min-h-11 shrink-0 items-center justify-center rounded-xl bg-emerald-600 px-4 py-2 text-sm font-medium text-white transition-[transform,background-color] duration-200 hover:bg-emerald-500 active:scale-[0.96]; }
+  .pwa-install-close { @apply flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-stone-400 transition-[transform,background-color,color] duration-200 hover:bg-stone-800 hover:text-stone-100 active:scale-[0.96]; }
+  .audio-control { @apply flex h-11 w-11 items-center justify-center rounded-2xl bg-[#f7faf4] text-forest transition-[transform,background-color] active:scale-[0.96] dark:bg-emerald-950/60; }
+  .player-main-button { @apply flex h-12 w-12 shrink-0 items-center justify-center rounded-[18px] bg-white text-forest shadow-sm transition-[transform,background-color] duration-200 hover:bg-[#fffaf2] active:scale-[0.96] dark:bg-[#16211E] dark:shadow-none dark:hover:bg-emerald-950/60; }
   .player-control { @apply flex h-10 w-10 items-center justify-center rounded-xl text-white transition-[transform,background-color] duration-200 hover:bg-white/15 active:scale-[0.96]; }
-  .ayah-card { @apply relative overflow-hidden rounded-[26px] bg-[#fffdf8] p-5 shadow-sm transition-[transform,background-color,box-shadow] duration-200 active:scale-[0.96]; box-shadow: 0 10px 26px rgb(71 119 92 / 7%), 0 1px 2px rgb(71 119 92 / 5%); }
+  .ayah-card { @apply relative overflow-hidden rounded-[26px] bg-white p-5 shadow-sm transition-[transform,background-color,box-shadow] duration-200 active:scale-[0.96] border border-stone-200 dark:bg-stone-900/80 dark:border-emerald-900/30 dark:shadow-none; box-shadow: 0 10px 26px rgb(71 119 92 / 7%), 0 1px 2px rgb(71 119 92 / 5%); }
   .ayah-card::before { content: ''; @apply absolute inset-y-5 left-0 w-1 rounded-r-full bg-transparent transition-[background-color] duration-200; }
-  .ayah-card-active { @apply bg-forest shadow-lg shadow-forest/20; box-shadow: 0 18px 34px rgb(71 119 92 / 24%), 0 2px 5px rgb(71 119 92 / 14%); }
+  .ayah-card-active { @apply border-2 border-emerald-600 bg-emerald-50/80 shadow-md dark:border-emerald-500 dark:bg-emerald-950/90 dark:shadow-lg dark:shadow-emerald-950/40; box-shadow: 0 18px 34px rgb(71 119 92 / 16%), 0 2px 5px rgb(71 119 92 / 10%); }
   .ayah-card-active::before { @apply bg-peach; }
-  .ayah-card-active p[dir='rtl'] { color: #fff; text-shadow: 0 1px 1px rgb(0 0 0 / 12%); }
-  .ayah-card-active .bg-white\/20 { outline: 1px solid rgb(255 255 255 / 18%); }
+  .ayah-number-active { @apply bg-emerald-500 text-stone-950 font-bold; }
+  .ayah-number-inactive { @apply border border-emerald-700/50 bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200; }
   .ayah-card-in-range { @apply outline outline-1 outline-sage; }
   .ayah-card:disabled { @apply cursor-not-allowed opacity-45; }
-  .range-settings-toggle { @apply flex min-h-12 w-full items-center justify-between gap-3 rounded-[22px] bg-[#eff6eb] px-4 py-3 text-left transition-[transform,background-color,box-shadow] duration-200 active:scale-[0.96]; box-shadow: inset 0 1px 0 rgb(255 255 255 / 70%), 0 5px 15px rgb(71 119 92 / 6%); }
+  .range-settings-toggle { @apply flex min-h-12 w-full items-center justify-between gap-3 rounded-[22px] bg-[#eff6eb] px-4 py-3 text-left transition-[transform,background-color,box-shadow] duration-200 active:scale-[0.96] dark:bg-emerald-950/60; box-shadow: inset 0 1px 0 rgb(255 255 255 / 70%), 0 5px 15px rgb(71 119 92 / 6%); }
   .range-settings-toggle > span { @apply flex items-center gap-2 text-forest; }
-  .range-settings-toggle small { @apply text-right text-xs font-semibold text-slate-500; }
-  .range-settings-panel { @apply mt-3 rounded-[24px] bg-[#f7faf4] p-4; box-shadow: inset 0 1px 0 rgb(255 255 255 / 75%); }
-  .range-choice { @apply flex min-h-11 min-w-11 items-center justify-center rounded-xl bg-white px-2 text-sm font-bold text-forest transition-[transform,background-color,color] active:scale-[0.96]; }
+  .range-settings-toggle small { @apply text-right text-xs font-semibold text-slate-500 dark:text-stone-300; }
+  .range-settings-panel { @apply mt-3 rounded-[24px] bg-[#f7faf4] p-4 dark:bg-[#16211E]; box-shadow: inset 0 1px 0 rgb(255 255 255 / 75%); }
+  .range-choice { @apply flex min-h-11 min-w-11 items-center justify-center rounded-xl bg-white px-2 text-sm font-bold text-forest transition-[transform,background-color,color] active:scale-[0.96] dark:bg-emerald-950/60; }
   .range-choice-active { @apply bg-forest text-white shadow-sm; }
-  .range-switch { @apply min-h-11 rounded-xl bg-white px-3 text-sm font-bold text-slate-500 transition-[transform,background-color,color] active:scale-[0.96]; }
+  .range-switch { @apply min-h-11 rounded-xl bg-white px-3 text-sm font-bold text-slate-500 transition-[transform,background-color,color] active:scale-[0.96] dark:bg-emerald-950/60 dark:text-stone-300; }
   .range-switch-active { @apply bg-forest text-white shadow-sm; }
-  .range-input { @apply w-full rounded-xl border border-sage bg-white px-3 py-3 text-center font-bold tabular-nums text-forest; }
+  .range-input { @apply w-full rounded-xl border border-sage bg-white px-3 py-3 text-center font-bold tabular-nums text-forest dark:border-emerald-900 dark:bg-[#16211E]; }
   .memory-picker { @apply space-y-2 rounded-[24px] bg-[#f7faf4] p-2; box-shadow: inset 0 1px 0 rgb(255 255 255 / 75%); }
   .memory-picker-option { @apply flex min-h-16 w-full items-center gap-3 rounded-[18px] bg-white px-3 text-left shadow-sm transition-[transform,background-color,box-shadow] duration-200 hover:bg-[#fbfdf8] hover:shadow-md active:scale-[0.96]; }
   .memory-picker-option-active { @apply bg-[#eff6eb] shadow-md; box-shadow: inset 0 0 0 1px rgb(71 119 92 / 20%), 0 7px 16px rgb(71 119 92 / 10%); }
@@ -133,75 +170,71 @@
   .bismillah-card { @apply w-full rounded-[26px] bg-[#fffaf2] p-5 text-center shadow-sm transition-[transform,background-color,box-shadow] duration-200 active:scale-[0.96]; box-shadow: 0 10px 26px rgb(158 108 73 / 8%), 0 1px 2px rgb(158 108 73 / 5%); }
   .bismillah-card small { @apply mt-1 block text-sm text-slate-500; }
   .bismillah-card-active { @apply bg-[#eff6eb] shadow-lg shadow-forest/15; }
-  .role-card { @apply flex min-h-24 flex-col items-center justify-center gap-1.5 rounded-[22px] border border-sage/80 bg-white p-3 text-sm font-bold text-slate-600 shadow-sm transition-[transform,background-color,border-color,box-shadow,color] duration-200 active:scale-[0.96]; }
-  .role-card:hover { @apply -translate-y-0.5 shadow-md; }
-  .role-card:focus-visible { @apply ring-4; }
-  .role-card-father:focus-visible { @apply ring-blue-200; }
-  .role-card-mother:focus-visible { @apply ring-pink-200; }
-  .role-card-active { @apply border-current shadow-md; }
-  .role-card-father { @apply text-[#3976a8]; }
-  .role-card-mother { @apply text-[#c96d91]; }
-  .role-card-father.role-card-active { @apply bg-[#edf6ff]; }
-  .role-card-mother.role-card-active { @apply bg-[#fff0f5]; }
-  .role-icon { @apply flex h-12 w-12 items-center justify-center rounded-2xl bg-white/70; }
+  .role-card { @apply flex min-h-24 flex-col items-center justify-center gap-1.5 rounded-[22px] border border-stone-200 bg-white p-3 text-sm font-bold text-stone-900 transition-[transform,background-color,border-color,color] duration-200 hover:border-emerald-500 active:scale-[0.96] dark:border-stone-800 dark:bg-stone-900/80 dark:text-stone-100 dark:hover:border-emerald-700; }
+  .role-card:focus-visible { @apply ring-2 ring-emerald-500; }
+  .role-card-active { @apply border-2 border-emerald-500 bg-emerald-50 text-emerald-900 dark:bg-emerald-950/60 dark:text-emerald-100; }
+  .role-card-father, .role-card-mother { @apply text-stone-900 dark:text-stone-100; }
+  .role-card-father.role-card-active, .role-card-mother.role-card-active { @apply bg-emerald-50 dark:bg-emerald-950/60; }
+  .role-icon { @apply flex h-12 w-12 items-center justify-center rounded-2xl bg-stone-100 dark:bg-stone-950/70; }
   .role-silhouette { @apply h-10 w-10; }
   .role-silhouette-mother { @apply h-11 w-11; }
   .condition-picker { @apply flex flex-wrap gap-2; }
   .condition-picker-compact { @apply gap-1.5; }
-  .condition-chip { @apply inline-flex min-h-11 items-center justify-center rounded-full border border-sage bg-white px-3.5 py-2 text-sm font-bold text-forest transition-[transform,background-color,border-color,color,box-shadow] duration-200 active:scale-[0.96]; }
-  .condition-chip:hover { @apply border-forest bg-[#f7faf4] shadow-sm; }
+  .condition-chip { @apply inline-flex min-h-11 items-center justify-center rounded-full border border-sage bg-white px-3.5 py-2 text-sm font-bold text-forest transition-[transform,background-color,border-color,color,box-shadow] duration-200 active:scale-[0.96] dark:border-stone-800 dark:bg-stone-900 dark:text-stone-300; }
+  .condition-chip:hover { @apply border-forest bg-[#f7faf4] shadow-sm dark:border-emerald-800 dark:bg-emerald-900 dark:text-white; }
   .condition-chip:focus-visible { @apply ring-4 ring-forest/20; }
   .condition-chip-active { @apply border-forest bg-forest text-white shadow-sm; }
   .condition-chip-active:hover { @apply bg-[#39684d] text-white; }
-  .icon-choice { @apply flex h-11 w-11 items-center justify-center rounded-xl bg-[#f7faf4] text-xl transition-[transform,background-color,outline] duration-200 active:scale-[0.96]; }
+  .icon-choice { @apply flex h-10 w-10 items-center justify-center rounded-xl border border-stone-300 bg-stone-50 text-xl transition-[transform,background-color,border-color] duration-200 hover:border-emerald-500 active:scale-[0.96] dark:border-stone-800 dark:bg-stone-950; }
   .small-icon-choice { @apply flex h-10 w-10 items-center justify-center rounded-xl bg-[#f7faf4] text-lg transition-[transform,background-color,outline] duration-200 active:scale-[0.96]; }
-  .icon-choice-active { @apply bg-peach outline outline-2 outline-forest; }
-  .memorized-choice { @apply flex w-full items-center gap-3 rounded-2xl bg-[#f7faf4] p-3 text-slate-500 transition-[transform,background-color] duration-200 active:scale-[0.96]; }
-  .memorized-choice-active { @apply bg-[#eff6eb] text-forest shadow-sm; }
+  .icon-choice-active { @apply scale-105 border-2 border-emerald-500 bg-emerald-50 outline-none dark:bg-emerald-950/60; }
+  .memorized-choice { @apply flex w-full cursor-pointer items-center gap-3 rounded-xl border border-stone-200 bg-stone-50 p-3 text-stone-900 transition-[transform,background-color,border-color] duration-200 hover:border-emerald-500 active:scale-[0.96] dark:border-stone-800/80 dark:bg-stone-950/50 dark:text-stone-200 dark:hover:border-emerald-800/60; }
+  .memorized-choice small { @apply block text-xs text-stone-600 dark:text-stone-400; }
+  .memorized-choice-active { @apply border-emerald-600 bg-emerald-50 text-emerald-900 dark:bg-emerald-950/60 dark:text-emerald-100; }
   .memorized-list { @apply max-h-[min(23rem,44vh)] space-y-2 overflow-y-auto pr-1; }
   .dashboard-status-grid { @apply grid grid-cols-2 gap-2.5 sm:gap-3 lg:grid-cols-4; }
-  .stat-card { @apply relative flex min-h-[88px] flex-row items-center gap-3 overflow-hidden rounded-[20px] bg-white/90 p-3 shadow-sm; box-shadow: 0 8px 20px rgb(71 119 92 / 7%), 0 1px 2px rgb(71 119 92 / 5%); }
+  .stat-card { @apply relative flex min-h-[88px] flex-row items-center gap-3 overflow-hidden rounded-[20px] border border-stone-200/80 bg-stone-50 p-3 text-stone-900 shadow-sm dark:border-emerald-900/30 dark:bg-[#0E1715] dark:text-stone-100 dark:shadow-none; box-shadow: 0 8px 20px rgb(71 119 92 / 7%), 0 1px 2px rgb(71 119 92 / 5%); }
   .stat-card::after { content: ''; @apply pointer-events-none absolute -bottom-6 -right-6 h-16 w-16 rounded-full bg-forest/[.045]; }
   .stat-card-icon { @apply relative z-10 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl; }
-  .stat-card b { @apply relative z-10 block font-display text-[26px] leading-none tabular-nums text-forest; }
-  .stat-card small { @apply relative z-10 mt-1 block text-[11px] font-semibold leading-snug text-slate-500; }
+  .stat-card b { @apply relative z-10 block text-xl font-bold leading-none tabular-nums text-emerald-600 dark:text-emerald-400; }
+  .stat-card small { @apply relative z-10 mt-1 block text-xs font-medium leading-snug text-stone-600 dark:text-stone-400; }
   .stat-card-target .stat-card-icon { @apply bg-peach text-terracotta; }
-  .stat-card-complete { @apply bg-[#eff6eb]; }
+  .stat-card-complete { @apply bg-[#eff6eb] dark:bg-[#131F1C]; }
   .stat-card-complete::after { @apply bg-forest/[.08]; }
   .stat-card-complete .stat-card-icon, .stat-card-review .stat-card-icon { @apply bg-sage text-forest; }
   .stat-card-new .stat-card-icon { @apply bg-[#fff1df] text-terracotta; }
-  .home-hero { @apply relative overflow-visible rounded-[30px] bg-forest px-5 py-5 text-white shadow-soft sm:px-6 sm:py-7 lg:px-10 lg:py-9; }
+  .home-hero { @apply relative overflow-visible rounded-[30px] bg-[#1B4332] px-5 py-5 text-white shadow-soft dark:border dark:border-emerald-900/40 dark:bg-[#122820] dark:text-emerald-50 sm:px-6 sm:py-7 lg:px-10 lg:py-9; }
   .home-hero-top { @apply relative flex min-h-11 items-center justify-between gap-3; }
   .home-hero-brand-mark { @apply h-6 w-6 shrink-0 rounded-lg outline outline-1 outline-white/20; }
   .home-hero-settings { @apply flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-white/15 text-white transition-[transform,background-color] duration-200 hover:bg-white/20 active:scale-[0.96]; }
   .home-hero-copy { @apply relative mt-5; }
   .home-hero-copy h1 { @apply text-3xl leading-[1.08] sm:text-4xl; }
-  .home-hero-copy p { @apply mt-2 max-w-md text-sm leading-relaxed text-white/70; }
+  .home-hero-copy p { @apply mt-2 max-w-md text-sm leading-relaxed text-emerald-200/80 dark:text-stone-300; }
   .home-hero-child { @apply relative mt-5; }
   .child-switcher-trigger { @apply flex min-h-12 w-full items-center gap-2 rounded-[18px] bg-white/15 px-3 text-left text-white transition-[transform,background-color] duration-200 hover:bg-white/20 active:scale-[0.96]; }
-  .target-card { @apply rounded-[24px] bg-[#f7faf4] p-4 transition-[transform,box-shadow,background-color] duration-200; }
-  .target-card:hover { @apply bg-[#eff6eb] shadow-sm; }
-  .target-card-done { @apply bg-[#fbfdf8] opacity-80; }
-  .status-pill { @apply inline-flex items-center gap-1 rounded-full bg-sage px-2 py-1 text-[11px] font-bold text-forest; }
-  .memory-card { @apply rounded-[22px] bg-[#f7faf4] p-4; }
+  .target-card { @apply rounded-[24px] bg-amber-50 p-4 transition-[transform,box-shadow,background-color] duration-200 dark:bg-[#131F1C] dark:border dark:border-emerald-800/30; }
+  .target-card:hover { @apply bg-amber-100 shadow-sm dark:bg-emerald-950; }
+  .target-card-done { @apply bg-amber-50 opacity-80 dark:bg-emerald-950/40; }
+  .status-pill { @apply inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-1 text-[11px] font-bold text-emerald-800 dark:bg-emerald-900/80 dark:text-emerald-100; }
+  .memory-card { @apply rounded-[22px] border border-amber-200/50 bg-amber-50/60 p-4 dark:border-emerald-800/30 dark:bg-[#131F1C]; }
   .sheet-backdrop { @apply fixed inset-0 z-50 flex items-end justify-center bg-slate-900/35 p-0 backdrop-blur-[2px] sm:items-center sm:p-4; }
-  .sheet { @apply max-h-[92vh] w-full overflow-y-auto rounded-t-[30px] bg-white p-5 shadow-2xl sm:max-w-lg sm:rounded-[30px] sm:p-7; }
-  .coach-panel { @apply rounded-[28px] border border-white/90 bg-white/95 p-5 shadow-[0_20px_55px_rgba(71,119,92,.22),0_2px_6px_rgba(71,119,92,.08)] backdrop-blur; animation: coach-in 220ms cubic-bezier(.2,0,0,1); }
-  .coach-fab { @apply flex min-h-12 items-center gap-2 rounded-full bg-forest px-4 py-3 text-sm font-bold text-white shadow-[0_14px_32px_rgba(71,119,92,.32)] transition-transform duration-200 active:scale-[0.96]; }
+  .sheet { @apply max-h-[92vh] w-full overflow-y-auto rounded-t-[30px] bg-white p-5 shadow-2xl dark:bg-[#16211E] sm:max-w-lg sm:rounded-[30px] sm:p-7; }
+  .coach-panel { @apply rounded-[28px] border border-white/90 bg-white/95 p-5 shadow-[0_20px_55px_rgba(71,119,92,.22),0_2px_6px_rgba(71,119,92,.08)] backdrop-blur dark:border-emerald-900/50 dark:bg-[#0C1311] dark:text-stone-100 dark:shadow-2xl; animation: coach-in 220ms cubic-bezier(.2,0,0,1); }
+  .coach-fab { @apply flex min-h-12 items-center gap-2 rounded-full bg-emerald-700 px-4 py-3 text-sm font-bold text-white shadow-xl shadow-emerald-950/40 transition-[transform,background-color] duration-200 hover:bg-emerald-600 active:scale-[0.96]; }
   .coach-pulse { @apply absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full bg-peach ring-2 ring-forest; animation: coach-pulse 1.8s ease-in-out infinite; }
   .coach-float-root { @apply fixed bottom-5 right-4 z-40 sm:bottom-7 sm:right-7; }
-  .coach-dialog-layer { @apply fixed inset-0 z-50 flex items-center justify-center p-4; }
+  .coach-dialog-layer { @apply pointer-events-auto fixed inset-0 z-50 flex items-center justify-center p-4; }
   .coach-dialog-backdrop { @apply absolute inset-0 cursor-default bg-slate-900/35 backdrop-blur-[2px]; }
   .coach-conversation-panel { @apply relative z-10 flex max-h-[min(42rem,calc(100dvh-2rem))] w-[min(26rem,calc(100vw-2rem))] flex-col overflow-hidden p-0; }
-  .coach-panel-header { @apply flex shrink-0 items-start gap-3 border-b border-sage/70 p-5; }
-  .coach-avatar { @apply flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-peach text-terracotta; }
-  .coach-close { @apply flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-slate-400 transition-[transform,background-color,color] hover:bg-[#f7faf4] hover:text-forest active:scale-[0.96]; }
+  .coach-panel-header { @apply flex shrink-0 items-start gap-3 border-b border-sage/70 p-5 dark:border-emerald-900/50; }
+  .coach-avatar { @apply flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-emerald-800/60 bg-emerald-950/80 text-emerald-300; }
+  .coach-close { @apply flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-slate-400 transition-[transform,background-color,color] hover:bg-[#f7faf4] hover:text-forest active:scale-[0.96] dark:text-stone-400 dark:hover:bg-stone-900 dark:hover:text-emerald-300; }
   .coach-messages { @apply flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto px-5 py-4; }
   .coach-message { @apply max-w-[92%] rounded-[20px] px-3.5 py-2.5 text-sm leading-relaxed; animation: coach-message-in 180ms cubic-bezier(.2,0,0,1); }
-  .coach-message-agent { @apply self-start rounded-bl-md bg-[#eff6eb] text-slate-600; }
+  .coach-message-agent { @apply self-start rounded-bl-md bg-[#eff6eb] text-slate-600 dark:border dark:border-emerald-800/40 dark:bg-emerald-950/70 dark:text-stone-200; }
   .coach-message-user { @apply self-end rounded-br-md bg-forest text-white; }
-  .coach-message-typing { @apply text-slate-500; }
-  .coach-footer { @apply shrink-0 border-t border-sage/70 bg-white/80; }
+  .coach-message-typing { @apply text-slate-500 dark:text-stone-300; }
+  .coach-footer { @apply shrink-0 border-t border-sage/70 bg-white/80 dark:border-emerald-900/50 dark:bg-[#0C1311]; }
   .coach-quick-replies { @apply flex flex-wrap gap-1.5 px-5 py-3; }
   .coach-section-label { @apply mb-2 text-xs font-bold uppercase tracking-[.12em] text-slate-400; }
   .coach-repeat-picker { @apply shrink-0 border-t border-sage/50 px-5 py-3; }
@@ -209,11 +242,11 @@
   .coach-primary-action { @apply flex min-h-11 flex-1 items-center justify-center gap-1.5 rounded-2xl bg-forest px-3 text-sm font-bold text-white transition-transform active:scale-[0.96]; }
   .coach-ai-action { @apply flex min-h-11 items-center justify-center gap-1.5 rounded-2xl bg-[#eff6eb] px-3 text-sm font-bold text-forest transition-transform active:scale-[0.96]; }
   .coach-ai-status { @apply mx-5 mb-3 rounded-2xl bg-[#eff6eb] px-3 py-2 text-xs font-semibold leading-relaxed text-forest; overflow-wrap: anywhere; }
-  .coach-note { @apply mx-5 mb-5 rounded-2xl bg-[#fffaf2] px-3 py-2 text-xs leading-relaxed text-terracotta; }
-  .practice-page { @apply min-h-screen bg-cream pb-12; }
+  .coach-note { @apply mx-5 mb-5 rounded-2xl bg-[#fffaf2] px-3 py-2 text-xs leading-relaxed text-terracotta dark:border dark:border-amber-800/40 dark:bg-amber-950/40 dark:text-amber-200; }
+  .practice-page { @apply min-h-screen bg-[#FDFBF7] pb-12 dark:bg-[#0F1715]; }
   .practice-shell { @apply mx-auto flex min-h-[calc(100vh-3rem)] max-w-3xl flex-col px-4 pt-6 sm:px-6 lg:min-h-[calc(100vh-5rem)] lg:pt-10; }
-  .practice-shell > header { @apply mb-1 rounded-[22px] bg-white/70 px-3 py-1.5 shadow-[0_8px_22px_rgba(71,119,92,.06)]; }
-  .practice-ayah-panel { @apply flex min-h-64 items-center justify-center rounded-[26px] bg-[#fffaf2] px-5 py-8 text-center shadow-inner lg:min-h-80 lg:px-8 lg:py-12; }
+  .practice-shell > header { @apply mb-1 rounded-[22px] bg-white/70 px-3 py-1.5 shadow-[0_8px_22px_rgba(71,119,92,.06)] dark:bg-[#16211E] dark:shadow-none; }
+  .practice-ayah-panel { @apply flex min-h-64 items-center justify-center rounded-[26px] bg-[#fffaf2] px-5 py-8 text-center shadow-inner dark:bg-emerald-950/60 dark:shadow-none lg:min-h-80 lg:px-8 lg:py-12; }
   .practice-ayah-panel-scroll { @apply block max-h-[48vh] min-h-0 overflow-y-auto text-right; }
   .practice-phase-navigation { @apply mx-auto mt-8 flex max-w-2xl gap-3; }
   .practice-phase-navigation > button { @apply !w-auto flex-1; }
@@ -230,13 +263,13 @@
   .tikrar-fruit-controls { @apply mt-5 flex justify-center gap-3; }
   .tikrar-fruit-control { @apply flex h-12 w-12 items-center justify-center rounded-2xl border border-sage bg-white text-2xl font-semibold leading-none text-forest shadow-sm transition-[transform,background-color,color] duration-200 hover:bg-[#f7faf4] active:scale-[0.96]; }
   .tikrar-fruit-control-add { @apply bg-forest text-white shadow-forest/20 hover:bg-[#39684d]; }
-  .review-session { @apply overflow-hidden rounded-[32px] bg-white shadow-[0_18px_55px_rgba(71,119,92,.14),0_2px_5px_rgba(71,119,92,.05)]; }
+  .review-session { @apply overflow-hidden rounded-[32px] bg-white shadow-[0_18px_55px_rgba(71,119,92,.14),0_2px_5px_rgba(71,119,92,.05)] dark:bg-[#16211E] dark:shadow-none; }
   .review-session > header { @apply px-5 pt-5 sm:px-7 sm:pt-6; }
   .review-hero { @apply bg-forest px-5 py-6 text-white sm:px-7; }
   .review-shuffle-button { @apply flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-2xl bg-forest px-4 text-sm font-bold text-white shadow-sm transition-[transform,background-color] active:scale-[0.96]; }
   .review-ayah-card { @apply min-h-[320px] cursor-pointer rounded-[26px] p-5 shadow-sm transition-[transform,box-shadow] duration-200 hover:shadow-md active:scale-[0.96] sm:p-6; }
-  .review-question-card { @apply bg-[#fffaf2]; }
-  .review-answer-card { @apply bg-[#eff6eb]; }
+  .review-question-card { @apply bg-amber-50 dark:bg-[#1C2925]; }
+  .review-answer-card { @apply bg-emerald-50 dark:bg-emerald-950/60; }
   .review-card-label { @apply text-xs font-bold uppercase tracking-[.14em]; }
   .review-arabic { @apply min-h-32 font-serif text-right text-[31px] leading-[2.15] text-forest sm:text-[36px]; }
   .review-audio-button { @apply flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-white text-forest shadow-sm transition-[transform,background-color,color] active:scale-[0.96]; }
@@ -245,35 +278,38 @@
   .settings-overview::after { content: ''; @apply pointer-events-none absolute -bottom-12 -right-9 h-36 w-36 rounded-full bg-white/10; }
   .settings-overview-icon { @apply relative z-10 flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white/15 text-peach; }
   .settings-section { @apply mt-5 p-5 sm:p-6; }
-  .settings-section-danger { @apply rounded-[24px] bg-[#fff4eb] shadow-sm; }
+  .dark .settings-section.glass-card { @apply border-emerald-900/70 bg-[#16211E] shadow-none; }
+  .settings-section-danger { @apply rounded-[24px] bg-[#fff4eb] shadow-sm dark:bg-rose-950/30 dark:shadow-none; }
   .settings-accordion-toggle { @apply flex min-h-[92px] w-full items-start justify-between gap-4 text-left transition-[opacity] duration-200; }
-  .settings-accordion-toggle:focus-visible { @apply rounded-2xl outline-none ring-2 ring-forest/35 ring-offset-2 ring-offset-white; }
+  .settings-accordion-toggle:focus-visible { @apply rounded-2xl outline-none ring-2 ring-emerald-500 ring-offset-2 ring-offset-white dark:ring-offset-[#16211E]; }
   .settings-accordion-toggle > div { @apply min-w-0 flex-1; }
   .settings-accordion-chevron { @apply mt-1 shrink-0 text-forest transition-transform duration-200; }
   .settings-accordion-chevron-open { @apply rotate-180; }
   .settings-accordion-panel { @apply overflow-hidden; }
   .qari-picker { @apply grid gap-2 sm:grid-cols-2; }
-  .qari-choice { @apply flex min-h-[68px] items-center gap-3 rounded-[20px] bg-[#f7faf4] p-3 text-left text-forest shadow-[inset_0_1px_0_rgba(255,255,255,.75),0_4px_12px_rgba(71,119,92,.05)] transition-[transform,background-color,box-shadow] duration-200 hover:bg-[#eff6eb] active:scale-[0.96]; }
-  .qari-choice-active { @apply bg-[#eff6eb]; box-shadow: inset 0 0 0 2px rgb(71 119 92 / 38%), 0 8px 18px rgb(71 119 92 / 10%); }
-  .qari-choice-radio { @apply flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white text-forest shadow-sm; }
-  .qari-choice-active .qari-choice-radio { @apply bg-forest text-white; }
+  .qari-choice { @apply flex min-h-[68px] items-center gap-3 rounded-[20px] border border-stone-200 bg-[#f7faf4] p-3 text-left text-forest shadow-[inset_0_1px_0_rgba(255,255,255,.75),0_4px_12px_rgba(71,119,92,.05)] transition-[transform,background-color,border-color,color,box-shadow] duration-200 hover:bg-[#eff6eb] active:scale-[0.96] dark:border-stone-800 dark:bg-stone-900/60 dark:text-stone-400 dark:shadow-none dark:hover:bg-stone-800/50; }
+  .qari-choice-active { @apply border-2 border-emerald-500 bg-emerald-950/30 text-emerald-950 shadow-md dark:text-white dark:shadow-md; }
+  .qari-choice-radio { @apply flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white text-forest shadow-sm dark:bg-stone-800 dark:text-emerald-200 dark:shadow-none; }
+  .qari-choice-active .qari-choice-radio { @apply bg-emerald-600 text-white; }
   .qari-choice b { @apply block text-sm leading-tight; }
-  .qari-choice small { @apply mt-1 block text-xs font-semibold text-slate-500; }
+  .qari-choice small { @apply mt-1 block text-xs font-semibold text-slate-500 dark:text-stone-400; }
   .qari-default-badge { @apply rounded-full bg-peach px-2 py-1 text-[10px] font-bold text-terracotta; }
-  .settings-section-heading > p:last-child { @apply mt-1 text-sm leading-relaxed text-slate-500; }
+  .settings-section-heading > .step-label { @apply border border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-800/40 dark:bg-emerald-950/60 dark:text-emerald-300; }
+  .settings-section-heading > span { @apply font-display mt-3 block text-lg font-semibold text-emerald-900 dark:text-emerald-100; }
+  .settings-section-heading > p:last-child { @apply mt-1 text-sm leading-relaxed text-stone-600 dark:text-stone-300; }
   .settings-add-button { @apply flex min-h-11 shrink-0 items-center gap-1.5 rounded-2xl bg-forest px-3.5 text-sm font-bold text-white shadow-sm shadow-forest/20 transition-[transform,background-color] duration-200 hover:bg-[#39684d] active:scale-[0.96]; }
   .settings-editor { @apply mt-6 border-t border-sage/70 pt-5; }
-  .settings-editor-title { @apply mb-5 flex items-center gap-3 rounded-[22px] bg-[#eff6eb] p-3; }
-  .settings-repeat-row { @apply flex min-h-[76px] items-center gap-3 rounded-[22px] bg-[#f7faf4] p-3.5 transition-[background-color,box-shadow] duration-200 hover:bg-[#eff6eb] hover:shadow-sm; }
-  .settings-repeat-row small { @apply mt-0.5 block text-xs leading-relaxed text-slate-500; }
-  .settings-repeat-index { @apply flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white text-xs font-bold tabular-nums text-terracotta shadow-sm; }
-  .settings-repeat-input { @apply h-11 w-12 rounded-xl border border-sage bg-white text-center font-bold tabular-nums text-forest transition-[border-color,box-shadow] focus:border-forest focus:ring-2 focus:ring-forest/15; }
-  .settings-save-bar { @apply fixed inset-x-0 bottom-0 z-20 border-t border-white/80 bg-cream/90 px-4 py-3 shadow-[0_-10px_30px_rgba(71,119,92,.07)] backdrop-blur sm:px-6; }
-  .settings-save-bar > .primary-button { @apply mx-auto max-w-3xl; }
+  .settings-editor-title { @apply mb-5 flex items-center gap-3 rounded-[22px] bg-[#eff6eb] p-3 dark:border dark:border-emerald-800/50 dark:bg-emerald-950/60; }
+  .settings-repeat-row { @apply flex min-h-[76px] items-center gap-3 rounded-[22px] border border-stone-200 bg-[#f7faf4] p-3.5 transition-[background-color,border-color,box-shadow] duration-200 hover:bg-[#eff6eb] hover:shadow-sm dark:border-emerald-900/40 dark:bg-stone-900/80 dark:text-stone-100 dark:shadow-md dark:hover:bg-stone-900; }
+  .settings-repeat-row small { @apply mt-0.5 block text-xs leading-relaxed text-slate-500 dark:text-stone-300; }
+  .settings-repeat-index { @apply flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white text-xs font-bold tabular-nums text-terracotta shadow-sm dark:border dark:border-emerald-900/60 dark:bg-stone-900 dark:text-emerald-200 dark:shadow-none; }
+  .settings-repeat-input { @apply h-11 w-12 rounded-xl border border-sage bg-white text-center font-bold tabular-nums text-forest transition-[border-color,box-shadow] focus:border-forest focus:ring-2 focus:ring-forest/15 dark:border-emerald-900/60 dark:bg-stone-900 dark:text-emerald-200 dark:focus:border-emerald-500 dark:focus:ring-emerald-500/20; }
+  .settings-save-bar { @apply fixed inset-x-0 bottom-0 z-20 border-t border-stone-200/80 bg-white/80 px-4 py-3 backdrop-blur-md dark:border-emerald-900/40 dark:bg-[#0C1311]/80 sm:px-6; }
+  .settings-save-button { @apply mx-auto max-w-3xl bg-emerald-600 font-medium text-white shadow-lg shadow-emerald-950/30 hover:bg-emerald-500; }
 
   @media (hover: hover) {
-    .ayah-card:not(:disabled):hover { @apply -translate-y-0.5 bg-white; box-shadow: 0 14px 30px rgb(71 119 92 / 11%), 0 2px 4px rgb(71 119 92 / 6%); }
-    .ayah-card-active:hover { @apply bg-forest; box-shadow: 0 20px 38px rgb(71 119 92 / 27%), 0 2px 5px rgb(71 119 92 / 14%); }
+    .ayah-card:not(:disabled):hover { @apply -translate-y-0.5; box-shadow: 0 14px 30px rgb(71 119 92 / 11%), 0 2px 4px rgb(71 119 92 / 6%); }
+    .ayah-card-active:hover { @apply bg-emerald-50/80 dark:bg-emerald-950/90; box-shadow: 0 20px 38px rgb(71 119 92 / 20%), 0 2px 5px rgb(71 119 92 / 12%); }
     .range-settings-toggle:hover { @apply bg-[#e7f1e3]; }
     .bismillah-card:hover { @apply bg-[#fff7ea]; }
   }
@@ -311,5 +347,5 @@
 @media (max-width: 639px) {
   .coach-dialog-layer { @apply items-end p-0; }
   .coach-conversation-panel { @apply max-h-[min(42rem,calc(100dvh-1rem))] w-full rounded-b-none rounded-t-[30px]; }
-  .pwa-install-prompt { @apply bottom-20; }
+  .pwa-install-prompt { @apply bottom-24; }
 }

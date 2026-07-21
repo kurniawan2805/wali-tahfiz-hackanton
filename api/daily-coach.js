@@ -61,7 +61,7 @@ export default async function handler(request, response) {
   if (request.method !== 'POST') return response.status(405).json({ error: 'Method not allowed' })
   if (!process.env.OPENAI_API_KEY) return response.status(503).json({ error: 'AI belum dikonfigurasi.' })
 
-  const { profile = {}, targets = [], memories = [], conditions = [], listenRepeats = 3, today, checkin = {}, localRecommendation = {} } = request.body || {}
+  const { locale = 'id', profile = {}, targets = [], memories = [], conditions = [], listenRepeats = 3, today, checkin = {}, localRecommendation = {} } = request.body || {}
   const expectedAction = actionTypes.includes(localRecommendation.actionType) ? localRecommendation.actionType : 'pause'
   const childData = {
     profile: { name: String(profile.name || '').slice(0, 80), age: String(profile.age || '').slice(0, 16) },
@@ -84,7 +84,7 @@ export default async function handler(request, response) {
       body: JSON.stringify({
         model: 'gpt-4.1-mini',
         store: false,
-        instructions: `Anda adalah Teman Hafalan untuk wali anak Indonesia. Berikan satu saran hangat dan singkat dalam Bahasa Indonesia untuk sesi saat ini. Gunakan hanya data yang diberikan. Tindakan recommendedAction.type WAJIB sama persis dengan localRecommendation.actionType; jangan menciptakan aksi baru. Saat tindakan adalah pause, validasi jeda dengan lembut. Jangan membuat diagnosis, klaim medis, atau rasa bersalah. Tujuan utama ialah kedekatan dengan Al-Qur’an, bukan jumlah hafalan. Jangan menyebut bahwa Anda AI.`,
+        instructions: `${locale === 'en' ? 'You are a warm Quran memorisation companion for a child’s guardian. Give one brief, gentle suggestion in English for the current session.' : 'Anda adalah Teman Hafalan untuk wali anak Indonesia. Berikan satu saran hangat dan singkat dalam Bahasa Indonesia untuk sesi saat ini.'} Use only the provided data. recommendedAction.type MUST exactly match localRecommendation.actionType; do not invent a new action. When the action is listen, clearly suggest playing a gentle Qur’an recitation now. When the action is pause, validate the pause gently. Do not make diagnoses, medical claims, or induce guilt. The goal is closeness to the Qur’an, not the amount memorised. Do not mention that you are AI.`,
         input: JSON.stringify(childData),
         text: { format: { type: 'json_schema', name: 'daily_coach_advice', strict: true, schema: adviceSchema } },
       }),

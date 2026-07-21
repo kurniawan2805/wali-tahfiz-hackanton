@@ -44,6 +44,18 @@ Jangan pernah memasukkan kunci API ke kode frontend atau melakukan commit pada b
 
 Saat menjalankan `npm run dev`, route lokal `/api/daily-coach` dijalankan oleh middleware Vite. Dengan begitu Teman Hafalan dapat memakai `OPENAI_API_KEY` dari `.env.local` tanpa mengeksposnya ke browser. Pada deployment, route yang sama tetap dilayani oleh fungsi server `api/daily-coach.js`.
 
+## Bahasa aplikasi
+
+Wali Tahfiz tersedia dalam Bahasa Indonesia dan English. Pengguna dapat menggantinya dari **Pengaturan → Bahasa aplikasi**; pilihan itu disimpan di perangkat mereka.
+
+Untuk menentukan bahasa awal bagi pengunjung baru, tambahkan nilai berikut ke `.env.local` atau environment deployment:
+
+```env
+VITE_APP_LOCALE=en
+```
+
+Nilai yang didukung adalah `id` (default) dan `en`. Salinan antarmuka berada di [src/i18n.js](src/i18n.js), sehingga penambahan atau penyuntingan bahasa tetap terpusat.
+
 ## Teknologi
 
 - React + Vite

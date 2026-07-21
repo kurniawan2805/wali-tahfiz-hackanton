@@ -63,10 +63,17 @@ export function getReviewRecommendations(memories, { today = localDateKey(), lim
     .slice(0, limit)
 }
 
-export function reviewDueLabel(memory, today = localDateKey()) {
-  if (isDueForReview(memory, today)) return 'Siap diulang'
+export function reviewDueState(memory, today = localDateKey()) {
+  if (isDueForReview(memory, today)) return { status: 'due', days: 0 }
   const days = Math.ceil((dateFromKey(memory.nextReviewAt) - dateFromKey(today)) / 86400000)
-  return `Dalam ${days} hari`
+  return { status: 'scheduled', days }
+}
+
+// Kept for older callers; active UI should use reviewDueState with its locale's
+// formatter so learning data stays language-neutral.
+export function reviewDueLabel(memory, today = localDateKey()) {
+  const due = reviewDueState(memory, today)
+  return due.status === 'due' ? 'Siap diulang' : `Dalam ${due.days} hari`
 }
 
 export function isCreatedToday(value, today = localDateKey()) {

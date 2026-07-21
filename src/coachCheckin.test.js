@@ -17,13 +17,21 @@ test('new check-ins only hold learning context and start as a suggestion', () =>
 })
 
 test('readiness records whether a child is ready without storing conversation text', () => {
-  assert.equal(readinessForCondition('lelah'), 'not_ready')
+  assert.equal(readinessForCondition('lelah'), 'ready')
   assert.equal(readinessForCondition('siap'), 'ready')
   assert.equal(readinessForCondition(''), 'unanswered')
 
   const checkin = createCoachCheckin({ childId: 'child-a', date: '2026-07-18', now: '2026-07-18T08:00:00.000Z', readiness: 'not_ready', answeredAt: '2026-07-18T08:02:00.000Z' })
   assert.equal(checkinReadiness(checkin), 'not_ready')
   assert.equal(checkin.answeredAt, '2026-07-18T08:02:00.000Z')
+})
+
+test('wanting to play still allows the Quran listening action', () => {
+  assert.equal(readinessForCondition('ingin-main'), 'ready')
+})
+
+test('being tired still allows an optional Quran listening action', () => {
+  assert.equal(readinessForCondition('lelah'), 'ready')
 })
 
 test('legacy check-ins without readiness prompt again', () => {

@@ -41,7 +41,7 @@ function offlineAppShell() {
         .filter((file) => file.type === 'chunk' || file.type === 'asset')
         .map((file) => `/${file.fileName}`)
       const appShell = ['/', '/index.html', '/manifest.webmanifest', '/icons/app-icon.svg', '/icons/app-icon-maskable.svg', '/icons/app-icon-180.png', '/icons/app-icon-192.png', '/icons/app-icon-512.png', '/icons/app-icon-maskable-512.png', '/fonts/dm-sans-latin.woff2', '/fonts/fredoka-latin.woff2', '/fonts/amiri-quran-arabic.woff2', ...files]
-      const source = `const CACHE_NAME = 'wali-tahfiz-static-v5'
+      const source = `const CACHE_NAME = 'wali-tahfiz-static-v6'
 const AUDIO_CACHE_NAME = 'wali-tahfiz-audio-v1'
 const APP_SHELL = ${JSON.stringify(appShell)}
 
