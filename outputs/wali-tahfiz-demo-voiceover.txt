@@ -1,0 +1,15 @@
+I started building Wali Tahfiz at the OpenAI Community Jakarta event, where this project received second place. I continued developing it after the event into a working Quran memorisation companion for families.
+
+The idea is simple: help parents guide children through small, calm memorisation sessions without pressure. From the beginning, Codex was my engineering partner. It helped me inspect the React project, shape the user flows, identify missing features, and make decisions around accessibility, gentle language, and local-first data.
+
+Guardians can create a family profile and add separate profiles for each child. Each child keeps their own memorisation, targets, practice settings, and review history.
+
+On the home screen, the guardian creates a short target by choosing a surah and verse range. The child then follows three guided steps: Listen, Repeat, and Connect.
+
+When the target is complete, it becomes saved memorisation and receives a gentle review schedule: one, three, seven, fourteen, and thirty days. Review uses a random verse prompt, and the guardian records whether it felt smooth or needs another try.
+
+The listening space includes Al-Fatihah and Juz 30, with Arabic text, translation, reciter selection, verse repetition, range playback, and clear audio controls.
+
+The Memorisation Companion asks about the child’s mood and suggests one small next step. GPT-5.6 turns the app’s local recommendation into a short, gentle message. The API key stays on the server, and local advice still works when AI is unavailable.
+
+Codex helped me move from an event prototype to a tested, documented product. Wali Tahfiz is still a work in progress, and there is more I want to improve with families and children. I’m grateful to keep learning, listening, and developing it—one gentle step at a time.

@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 560 160" role="img" aria-label="Wali Tahfiz">
+  <g transform="translate(8 8)">
+    <rect width="144" height="144" rx="42" fill="#47775c"/>
+    <circle cx="72" cy="72" r="55" fill="#fff9ed"/>
+    <path d="M30 80c17-13 34-14 42 0v31c-13-11-28-10-42 0V80Zm84 0c-17-13-34-14-42 0v31c13-11 28-10 42 0V80Z" fill="#d3a374"/>
+    <path d="M34 83c13-7 25-6 34 2v20c-11-6-23-6-34 0V83Zm76 0c-13-7-25-6-34 2v20c11-6 23-6 34 0V83Z" fill="#fffdf8"/>
+    <path d="M72 82v29" fill="none" stroke="#47775c" stroke-linecap="round" stroke-width="4"/>
+    <path d="M60 69c-8-2-14-9-14-18 0-10 8-18 18-18 2 0 4 0 6 1-5 3-9 9-9 16 0 10 8 18 18 18 4 0 8-2 12-5-4 5-9 7-15 7-6 0-12-3-16-8Z" fill="#47775c"/>
+    <path d="M94 29c0 8-7 15-15 15 8 0 15 7 15 15 0-8 7-15 15-15-8 0-15-7-15-15Z" fill="#d3a374"/>
+  </g>
+  <text x="178" y="72" fill="#47775c" font-family="Fredoka, Arial Rounded MT Bold, sans-serif" font-size="42" font-weight="700" letter-spacing="-1">Wali Tahfiz</text>
+  <text x="181" y="108" fill="#8b6b4d" font-family="DM Sans, Arial, sans-serif" font-size="18" font-weight="600" letter-spacing="1.7">TEMAN HAFALAN KELUARGA</text>
+</svg>
