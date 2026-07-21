@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, useRef, useState } from 'react'
-import { ArrowLeft, ArrowRight, Baby, Bot, CalendarDays, Check, ChevronDown, CircleCheck, Clock3, Headphones, Leaf, Pause, Play, Plus, RotateCcw, Search, Send, Settings, Shuffle, SkipBack, SkipForward, SlidersHorizontal, Sparkles, Trash2, UserRound, Volume2, X } from 'lucide-react'
+import { ArrowLeft, ArrowRight, Baby, Bot, CalendarDays, Check, ChevronDown, CircleCheck, Clock3, Headphones, Leaf, Pause, Play, Plus, RotateCcw, Search, Send, Settings, Shuffle, SkipBack, SkipForward, SlidersHorizontal, Sparkles, Trash2, Upload, UserRound, Volume2, X } from 'lucide-react'
 import { clearAllData, createBackup, db, getProfile, getQuranRange, getQuranRepeat, getTargetsForDay, getTargetsForMemory, hasLegacyStorage, migrateLegacyStorage, normalizeFamilyProfile, restoreBackup, saveProfile, saveQuranRange, saveQuranRepeat } from './db'
 import { createCoachCheckin, isPersonalAdvice, readinessForCondition } from './coachCheckin'
 import { createScheduledMemory, getReviewRecommendations, hasReviewTargetForToday, isCreatedToday, localDateKey, reviewDueLabel, scheduleReviewResult } from './reviewSchedule'
@@ -190,9 +190,12 @@ function OnboardingShell({ step, children, footer }) {
       <PageHeader title="Mulai perjalanan hafalan"/>
       <section className="glass-card onboarding-card">
         <div className="onboarding-hero">
-          <div>
-            <p className="text-[11px] font-bold uppercase tracking-[.14em] text-white/70">Persiapan keluarga</p>
-            <p className="mt-1 text-sm font-semibold text-white">Langkah {step} dari 2</p>
+          <div className="onboarding-hero-copy">
+            <span className="onboarding-hero-mark" aria-hidden="true"><Leaf size={18}/></span>
+            <div>
+              <p className="text-[11px] font-bold uppercase tracking-[.14em] text-white/70">Persiapan keluarga</p>
+              <p className="mt-1 text-sm font-semibold text-white">Langkah {step} dari 2</p>
+            </div>
           </div>
           <ol className="onboarding-progress" aria-label={`Kemajuan onboarding: langkah ${step} dari 2`}>
             {progress.map((item) => <li key={item} className={item <= step ? 'onboarding-progress-item-active' : ''} aria-current={item === step ? 'step' : undefined}><span>{item}</span><b className="sr-only">Langkah {item}{item === step ? ', saat ini' : item < step ? ', selesai' : ''}</b></li>)}
@@ -205,11 +208,14 @@ function OnboardingShell({ step, children, footer }) {
   </main>
 }
 
-function Onboarding({ save }) {
+function Onboarding({ save, onImport }) {
   const [step, setStep] = useState(1)
   const [family, setFamily] = useState({ role: 'Bunda', children: [], activeChildId: null })
   const [child, setChild] = useState(createChild)
   const [editingChildId, setEditingChildId] = useState(null)
+  const [importStatus, setImportStatus] = useState('')
+  const [isImporting, setIsImporting] = useState(false)
+  const importInputRef = useRef(null)
   const saveChild = () => {
     if (!child.name.trim()) return
     const nextChild = { ...child, name: child.name.trim() }
@@ -231,17 +237,27 @@ function Onboarding({ save }) {
     return { ...current, children, activeChildId: children.some((item) => item.id === current.activeChildId) ? current.activeChildId : children[0]?.id || null }
   })
   const finish = () => save({ id: 'family', role: family.role, children: family.children, activeChildId: family.children[0]?.id || null })
+  const importBackup = async (event) => {
+    const file = event.target.files?.[0]
+    event.target.value = ''
+    if (!file) return
+    setIsImporting(true); setImportStatus('')
+    try { await onImport(JSON.parse(await file.text())) }
+    catch (error) { setImportStatus(error instanceof Error ? error.message : 'File cadangan tidak dapat diimpor.') }
+    finally { setIsImporting(false) }
+  }
   if (step === 1) return <OnboardingShell step={step} footer={<button type="button" onClick={() => setStep(2)} className="primary-button">Lanjutkan <ArrowRight size={18} aria-hidden="true"/></button>}>
     <p className="step-label bg-peach text-terracotta"><UserRound size={13}/> SAPAAN KELUARGA</p>
     <h2 className="onboarding-heading">Siapa yang menemani?</h2>
-    <p className="onboarding-description">Pilihan ini akan dipakai untuk sapaan di aplikasi.</p>
+    <p className="onboarding-description">Pilih sapaan yang akan menemani setiap sesi hafalan di rumah.</p>
     <div className="onboarding-choice-group"><RolePicker value={family.role} onChange={(role) => setFamily((current) => ({ ...current, role }))}/></div>
+    <section className="onboarding-restore" aria-labelledby="restore-backup-title"><span className="onboarding-restore-icon" aria-hidden="true"><Upload size={17}/></span><div className="min-w-0 flex-1"><h3 id="restore-backup-title" className="font-bold text-forest">Sudah punya cadangan?</h3><p>Impor file JSON untuk melanjutkan data hafalan dari perangkat lama.</p></div><button type="button" disabled={isImporting} onClick={() => importInputRef.current?.click()} className="onboarding-restore-button disabled:cursor-wait disabled:opacity-60">{isImporting ? 'Memulihkan…' : 'Impor'}</button><input ref={importInputRef} onChange={importBackup} type="file" accept="application/json,.json" className="sr-only"/>{importStatus && <p role="status" className="onboarding-restore-status">{importStatus}</p>}</section>
   </OnboardingShell>
 
   return <OnboardingShell step={step} footer={<div className="onboarding-actions"><button type="button" onClick={() => setStep(1)} className="secondary-button onboarding-back-button"><ArrowLeft size={18}/><span className="sr-only">Kembali</span></button><button type="button" disabled={!family.children.length} onClick={finish} className="primary-button disabled:cursor-not-allowed disabled:opacity-45">Mulai bersama {family.role}<ArrowRight size={18} aria-hidden="true"/></button></div>}>
     <p className="step-label bg-sage text-forest"><Baby size={13}/> PROFIL ANAK</p>
     <h2 className="onboarding-heading">Tambahkan anak satu per satu</h2>
-    <p className="onboarding-description">Setiap anak menyimpan hafalan dan targetnya sendiri.</p>
+    <p className="onboarding-description">Setiap anak menyimpan hafalan, target, dan perkembangannya sendiri.</p>
     {family.children.length > 0 && <section className="onboarding-saved-children" aria-labelledby="saved-children-title"><p id="saved-children-title" className="onboarding-section-label">Anak yang sudah ditambahkan</p><ChildList children={family.children} activeChildId={family.activeChildId} onEdit={editChild} onRemove={removeChild}/></section>}
     <section className="onboarding-child-form" aria-labelledby="child-profile-title"><p id="child-profile-title" className="onboarding-form-title">{editingChildId ? 'Ubah profil anak' : family.children.length ? 'Tambah anak berikutnya' : 'Profil anak pertama'}</p><ChildEditor child={child} onChange={setChild} includeMemorized autoFocus={!editingChildId && family.children.length === 0}/><button type="button" disabled={!child.name.trim()} onClick={saveChild} className="secondary-button mt-5 disabled:cursor-not-allowed disabled:opacity-45"><Plus size={18}/>{editingChildId ? 'Simpan perubahan anak' : 'Simpan anak & tambah lagi'}</button></section>
   </OnboardingShell>
@@ -1541,7 +1557,7 @@ function App() {
   }
   const home = profile ? <Home profile={profile} family={family} onSelectChild={selectChild} settings={() => navigate('/settings')} audioLibrary={() => navigate('/audio')} openPractice={openPractice} openReview={openReview} autoOpenCoach={initialCoachVisitRef.current} onAutoCoachOpened={() => { initialCoachVisitRef.current = false }}/> : null
   if (!isReady) return <main className="flex min-h-screen items-center justify-center bg-cream"><p className="font-display text-xl text-forest">Menyiapkan data keluarga…</p></main>
-  if (!family || !profile) return <Onboarding save={saveFamily}/>
+  if (!family || !profile) return <Onboarding save={saveFamily} onImport={importData}/>
   if (pathname === '/settings') return <Suspense fallback={<RouteFallback/>}><LazySettingsPage family={family} save={saveFamily} back={() => navigate('/')} onExport={exportData} onImport={importData} onReset={resetData} ui={{ ChildEditor, ChildList, PageHeader, RolePicker }}/></Suspense>
   if (pathname === '/audio') return <Suspense fallback={<RouteFallback/>}><LazyQuranRangePage back={() => navigate('/')}/></Suspense>
   if (['/talaqqi', '/tikrar', '/rabt'].includes(pathname)) {
