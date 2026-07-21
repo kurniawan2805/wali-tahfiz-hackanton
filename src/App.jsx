@@ -1,6 +1,6 @@
 import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import { ArrowLeft, ArrowRight, Baby, Bot, CalendarDays, Check, ChevronDown, CircleCheck, Clock3, Headphones, Leaf, Pause, Play, Plus, RotateCcw, Search, Send, Settings, Shuffle, SkipBack, SkipForward, SlidersHorizontal, Sparkles, Trash2, UserRound, Volume2, X } from 'lucide-react'
-import { db, getProfile, getQuranRange, getQuranRepeat, getTargetsForDay, getTargetsForMemory, hasLegacyStorage, migrateLegacyStorage, normalizeFamilyProfile, saveProfile, saveQuranRange, saveQuranRepeat } from './db'
+import { clearAllData, createBackup, db, getProfile, getQuranRange, getQuranRepeat, getTargetsForDay, getTargetsForMemory, hasLegacyStorage, migrateLegacyStorage, normalizeFamilyProfile, restoreBackup, saveProfile, saveQuranRange, saveQuranRepeat } from './db'
 import { createCoachCheckin, isPersonalAdvice, readinessForCondition } from './coachCheckin'
 import { createScheduledMemory, getReviewRecommendations, hasReviewTargetForToday, isCreatedToday, localDateKey, reviewDueLabel, scheduleReviewResult } from './reviewSchedule'
 
@@ -1461,6 +1461,34 @@ function App() {
     clearRouteDataForChildren(deleted)
     setFamily(normalized.children.length ? normalized : null)
   }
+  const clearActiveRouteData = () => {
+    writeRouteData(ACTIVE_TARGET_KEY, null)
+    writeRouteData(ACTIVE_MEMORY_KEY, null)
+    writeRouteData(ACTIVE_PRACTICE_SESSION_KEY, null)
+  }
+  const exportData = async () => {
+    const backup = await createBackup()
+    const file = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' })
+    const href = URL.createObjectURL(file)
+    const link = document.createElement('a')
+    link.href = href
+    link.download = `wali-tahfiz-cadangan-${todayKey()}.json`
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+    URL.revokeObjectURL(href)
+  }
+  const importData = async (backup) => {
+    const restored = await restoreBackup(backup)
+    clearActiveRouteData()
+    setFamily(restored)
+  }
+  const resetData = async () => {
+    await clearAllData()
+    clearActiveRouteData()
+    setFamily(null)
+    navigate('/')
+  }
   const selectChild = (childId) => {
     if (!family?.children.some((child) => child.id === childId) || family.activeChildId === childId) return
     const next = { ...family, activeChildId: childId }
@@ -1514,7 +1542,7 @@ function App() {
   const home = profile ? <Home profile={profile} family={family} onSelectChild={selectChild} settings={() => navigate('/settings')} audioLibrary={() => navigate('/audio')} openPractice={openPractice} openReview={openReview} autoOpenCoach={initialCoachVisitRef.current} onAutoCoachOpened={() => { initialCoachVisitRef.current = false }}/> : null
   if (!isReady) return <main className="flex min-h-screen items-center justify-center bg-cream"><p className="font-display text-xl text-forest">Menyiapkan data keluarga…</p></main>
   if (!family || !profile) return <Onboarding save={saveFamily}/>
-  if (pathname === '/settings') return <Suspense fallback={<RouteFallback/>}><LazySettingsPage family={family} save={saveFamily} back={() => navigate('/')} ui={{ ChildEditor, ChildList, PageHeader, RolePicker }}/></Suspense>
+  if (pathname === '/settings') return <Suspense fallback={<RouteFallback/>}><LazySettingsPage family={family} save={saveFamily} back={() => navigate('/')} onExport={exportData} onImport={importData} onReset={resetData} ui={{ ChildEditor, ChildList, PageHeader, RolePicker }}/></Suspense>
   if (pathname === '/audio') return <Suspense fallback={<RouteFallback/>}><LazyQuranRangePage back={() => navigate('/')}/></Suspense>
   if (['/talaqqi', '/tikrar', '/rabt'].includes(pathname)) {
     const target = readRouteData(ACTIVE_TARGET_KEY)

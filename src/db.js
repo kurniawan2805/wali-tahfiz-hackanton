@@ -96,6 +96,49 @@ db.version(4).stores({
 
 const legacyKeys = { profile: 'wali-tahfiz-profile', targets: 'wali-tahfiz-targets', memories: 'wali-tahfiz-memories', quranRepeat: 'wali-tahfiz-quran-repeat' }
 const readLegacyJson = (key, fallback) => { try { return JSON.parse(localStorage.getItem(key)) ?? fallback } catch { return fallback } }
+const backupTables = ['profiles', 'targets', 'memories', 'preferences', 'coachCheckins']
+
+export const BACKUP_FORMAT = 'wali-tahfiz-backup'
+export const BACKUP_VERSION = 1
+
+export function validateBackup(backup) {
+  if (!backup || typeof backup !== 'object' || Array.isArray(backup)) throw new Error('File cadangan tidak dikenali.')
+  if (backup.format !== BACKUP_FORMAT || backup.version !== BACKUP_VERSION || !backup.data || typeof backup.data !== 'object') {
+    throw new Error('File ini bukan cadangan Wali Tahfiz yang didukung.')
+  }
+  if (!backup.data.profiles?.some((profile) => profile?.id === 'family')) throw new Error('Cadangan ini tidak memiliki profil keluarga.')
+  if (backupTables.some((table) => !Array.isArray(backup.data[table]))) throw new Error('Isi cadangan tidak lengkap.')
+  return backup
+}
+
+export async function createBackup() {
+  const entries = await Promise.all(backupTables.map(async (table) => [table, await db.table(table).toArray()]))
+  return { format: BACKUP_FORMAT, version: BACKUP_VERSION, exportedAt: new Date().toISOString(), data: Object.fromEntries(entries) }
+}
+
+export async function restoreBackup(candidate) {
+  const backup = validateBackup(candidate)
+  const family = normalizeFamilyProfile(backup.data.profiles.find((profile) => profile.id === 'family'))
+  await db.transaction('rw', db.profiles, db.targets, db.memories, db.preferences, db.coachCheckins, async () => {
+    await Promise.all(backupTables.map((table) => db.table(table).clear()))
+    await db.profiles.put({ ...family, id: 'family', updatedAt: family.updatedAt || new Date().toISOString() })
+    await Promise.all(backupTables.filter((table) => table !== 'profiles').map((table) => {
+      const rows = backup.data[table]
+      return rows.length ? db.table(table).bulkPut(rows) : Promise.resolve()
+    }))
+  })
+  // A legacy backup on the receiving device must not overwrite this restore
+  // during the one-time startup migration.
+  Object.values(legacyKeys).forEach((key) => localStorage.removeItem(key))
+  return family
+}
+
+export async function clearAllData() {
+  await db.transaction('rw', db.profiles, db.targets, db.memories, db.preferences, db.coachCheckins, db.meta, async () => {
+    await Promise.all([...backupTables, 'meta'].map((table) => db.table(table).clear()))
+  })
+  Object.values(legacyKeys).forEach((key) => localStorage.removeItem(key))
+}
 
 export function hasLegacyStorage() {
   return Object.values(legacyKeys).some((key) => localStorage.getItem(key) !== null)
