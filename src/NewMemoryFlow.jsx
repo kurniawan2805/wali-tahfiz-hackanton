@@ -29,7 +29,7 @@ const audioSurahs = [
   { id: '114', name: 'An-Nas', arabic: 'ٱلنَّاس', ayat: 6, group: 'juz30' },
 ]
 
-const rangeLabel = (start, end, t) => t('practice.verseRange', { start, end })
+const rangeLabel = (start, end, t) => t ? t('practice.verseRange', { start, end }) : `Verse ${start}–${end}`
 const surahFor = (id) => audioSurahs.find((surah) => surah.id === id) || surahs.find((surah) => surah.id === id)
 
 const stripBismillah = (text, surahId, ayahNumber) => {
