@@ -82,7 +82,7 @@ export default async function handler(request, response) {
       method: 'POST',
       headers: { Authorization: `Bearer ${process.env.OPENAI_API_KEY}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        model: 'gpt-4.1-mini',
+        model: process.env.OPENAI_MODEL || 'gpt-5.6',
         store: false,
         instructions: `${locale === 'en' ? 'You are a warm Quran memorisation companion for a child’s guardian. Give one brief, gentle suggestion in English for the current session.' : 'Anda adalah Teman Hafalan untuk wali anak Indonesia. Berikan satu saran hangat dan singkat dalam Bahasa Indonesia untuk sesi saat ini.'} Use only the provided data. recommendedAction.type MUST exactly match localRecommendation.actionType; do not invent a new action. When the action is listen, clearly suggest playing a gentle Qur’an recitation now. When the action is pause, validate the pause gently. Do not make diagnoses, medical claims, or induce guilt. The goal is closeness to the Qur’an, not the amount memorised. Do not mention that you are AI.`,
         input: JSON.stringify(childData),

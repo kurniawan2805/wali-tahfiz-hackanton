@@ -1,225 +1,170 @@
-# Wali Tahfiz Corner — Design Direction
+# Wali Tahfiz — Product and Design Guide
 
-> Pendamping hafalan Al-Qur'an yang lembut, praktis, dan berpusat pada hubungan hangat antara wali dan anak.
+## What this app is for
 
-## 1. Tujuan produk
+Wali Tahfiz helps families build a warm Qur’an memorisation habit at home. It starts with Al-Fatihah and Juz 30. A parent or guardian stays in charge of the session; the app simply makes the next small step clear.
 
-Wali Tahfiz Corner membantu keluarga Indonesia membangun kebiasaan hafalan Al-Qur'an, terutama Al-Fatihah dan Juz 30, dalam sesi yang kecil dan menyenangkan. Aplikasi tidak dirancang untuk mengejar kuantitas hafalan; ia membantu wali hadir, memberi struktur sederhana, dan mengulang pada waktu yang tepat.
+The goal is not to collect the most memorisation. The goal is for a child to feel safe, supported, and close to the Qur’an.
 
-### Pengguna utama
+## People we design for
 
-- **Wali**: Ayah atau Ibu yang mendampingi latihan dan mengatur target.
-- **Anak**: Dapat memiliki profil, hafalan, target, dan ritme pengulangan masing-masing.
+- **Parent or guardian:** sets up the family, chooses a child, creates targets, plays audio, and records how a session went.
+- **Child:** has a separate profile, memorised ranges, targets, repeat settings, and review schedule.
 
-### Prinsip desain
+One family can have more than one child. Switching the active child must never show another child’s targets or memorisation by mistake.
 
-1. **Lembut, bukan menekan.** Bahasa tidak menyalahkan; anak boleh berhenti saat lelah atau rewel.
-2. **Satu langkah kecil.** Satu target pendek lebih penting daripada agenda penuh.
-3. **Wali memimpin sesi.** Aplikasi memberi panduan, audio, dan pencatatan—bukan menggantikan interaksi manusia.
-4. **Kemajuan terasa jelas.** Status target, pengulangan, dan jadwal murojaah mudah dibaca dalam sekali lihat.
-5. **Mobile-first dan tenang.** Kontrol besar, layar lapang, dan distraksi visual minimal mendukung penggunaan bersama anak.
+## Product rules
 
-## 2. Arsitektur pengalaman
+1. Be kind, never demanding. A tired or upset child can pause without losing progress.
+2. Prefer one short action over a long to-do list.
+3. Help the adult lead the session. Do not try to replace their voice, judgement, or care.
+4. Make today’s plan and the next action easy to see.
+5. Keep personal data on the device by default.
+6. Work well on a phone first, then use extra tablet and desktop space thoughtfully.
+
+## Main journey
 
 ```mermaid
 flowchart TD
-  A[Onboarding keluarga] --> B[Beranda anak aktif]
-  B --> C[Tambah target]
-  C --> D{Jenis target}
-  D -->|Hafalan baru| E[Talaqqi → Tikrar → Rabt]
-  D -->|Murojaah| F[Soal sambung ayat acak]
-  E --> G[Hafalan tersimpan]
-  F --> G
-  G --> H[Pengulangan berjarak]
-  B --> I[Dengar Qur'an]
-  B --> J[Teman Hafalan]
-  B --> K[Pengaturan keluarga]
+  A[Set up family] --> B[Choose active child]
+  B --> C[Today’s plan]
+  C --> D[New memorisation]
+  D --> E[Listen]
+  E --> F[Repeat]
+  F --> G[Connect]
+  G --> H[Saved memorisation]
+  H --> I[Spaced review]
+  C --> J[Review a saved range]
+  C --> K[Listen to Qur’an]
+  C --> L[Memorisation Companion]
+  B --> M[Settings and backup]
 ```
 
-| Area | Tujuan | Aksi utama |
-| --- | --- | --- |
-| Onboarding | Mengenali wali dan anak-anak yang didampingi | Pilih sapaan, tambah profil anak, tandai hafalan awal |
-| Beranda | Menjadi pusat sesi hari ini | Tambah atau mulai target, lihat hafalan tersimpan |
-| Hafalan baru | Memecah materi menjadi latihan lima menit | Dengarkan, ikuti, lalu sambungkan ayat |
-| Murojaah | Menguatkan ingatan melalui recall | Jawab sambungan ayat, lalu tandai *Lancar* / *Butuh ulang* |
-| Dengar Qur'an | Menemani aktivitas dengan murattal | Pilih surat/ayat, atur pengulangan dan rentang |
-| Teman Hafalan | Memberi saran yang sesuai suasana anak | Pilih kondisi anak, lalu ambil satu saran ringan |
-| Pengaturan | Mengelola keluarga dan ritme latihan | Ganti anak aktif, profil, hafalan, serta jumlah pengulangan |
+## Key screens and features
 
-## 3. Navigasi dan rute
-
-| Rute | Layar | Catatan desain |
-| --- | --- | --- |
-| `/` | Beranda | Ringkasan target hari ini, daftar target, hafalan tersimpan, dan tombol bantuan mengambang |
-| `/settings` | Pengaturan | Profil wali, daftar anak, pengaturan pengulangan per anak |
-| `/audio` | Dengar Qur'an | Katalog surat, kartu ayat, audio berurutan, serta pengaturan rentang |
-| `/talaqqi` | Tahap 1 | Dengarkan satu ayat berulang kali sebelum pindah tahap |
-| `/tikrar` | Tahap 2 | Wali dan anak mengulang; penghitung memberi umpan balik konkret |
-| `/rabt` | Tahap 3 | Anak menyambungkan rentang ayat sebelum target disimpan |
-| `/murojaah` | Review | Kartu soal dan jawaban sambungan ayat yang diacak |
-
-Navigasi kembali selalu terlihat di layar fokus. Dari beranda, pintasan **Dengar Qur'an** dan tombol **Tanya teman hafalan** tetap mudah dijangkau tanpa menutup konten inti.
-
-## 4. Sistem visual
-
-### Karakter
-
-Visualnya hangat, natural, dan cukup dewasa untuk wali tanpa terasa kaku bagi anak. Permukaan terang, hijau hutan sebagai jangkar, dan aksen persik/terakota memberi rasa aman serta perayaan kecil. Hindari warna primer yang sangat jenuh, ilustrasi ramai, atau indikator yang bernada kompetitif.
-
-### Token warna
-
-| Token | Nilai | Peran |
-| --- | --- | --- |
-| `forest` | `#47775C` | Aksi utama, header, teks penting, status aktif |
-| `sage` | `#DCEBDC` | Latar pilihan lembut dan penanda sukses ringan |
-| `cream` | `#FFF9ED` | Latar halaman utama |
-| `peach` | `#FFE5C4` | Badge, langkah pembelajaran, aksen hangat |
-| `terracotta` | `#BD6F45` | Aksi sekunder, perhatian lembut, aksen nomor ayat |
-| `slate` | Tailwind slate | Teks isi dan informasi pendukung |
-
-Latar halaman memakai gradasi radial hijau pucat dan persik yang sangat halus. Kontras teks utama harus tetap memenuhi setidaknya WCAG AA.
-
-### Tipografi
-
-| Peran | Font | Penggunaan |
-| --- | --- | --- |
-| Display | Fredoka | Judul halaman, judul kartu, angka statistik |
-| Body | DM Sans | Isi, tombol, label, dan navigasi |
-| Arab | Serif sistem | Ayat Al-Qur'an; rata kanan, `dir="rtl"`, leading longgar |
-
-- Judul layar: `30–36px`, display, hijau hutan.
-- Judul bagian: `20–24px`, display.
-- Isi: `14–16px`, line-height lega.
-- Label kategori: `11–12px`, huruf kapital dengan tracking.
-- Ayat Arab: `27–36px` pada layar biasa dan hingga `60px` pada layar latihan fokus.
-
-### Bentuk, ruang, dan elevasi
-
-- Radius utama: `24–32px` untuk kartu dan panel; `12–16px` untuk kontrol kecil.
-- Ruang dasar: kelipatan `4px`; celah umum `12`, `16`, `20`, `24`, dan `32px`.
-- Kartu memakai putih semi-transparan, garis putih/sage halus, dan bayangan hijau transparan yang rendah.
-- Tombol memiliki tinggi sentuh minimal `44px`; tombol utama minimal `48px`.
-
-## 5. Komponen inti
-
-| Komponen | Aturan penggunaan |
+| Screen | What it does |
 | --- | --- |
-| `glass-card` | Wadah utama dengan radius besar untuk grup informasi yang setara |
-| Primary button | Hijau hutan, teks putih; hanya satu aksi dominan per area |
-| Secondary button | Putih dengan garis sage; untuk kembali, dengarkan ulang, atau tindakan setara |
-| Icon button | Kotak membulat 44px; wajib memiliki `aria-label` bila tanpa teks |
-| Step label | Pil kecil berikon untuk menandai konteks, bukan sebagai pengganti heading |
-| Target card | Menampilkan jenis, surat, rentang ayat, status, dan satu aksi lanjutan |
-| Memory card | Menampilkan hafalan tersimpan, status jatuh tempo, dan aksi tambah murojaah |
-| Ayah card | Nomor, teks Arab, terjemahan, dan status audio aktif; satu kartu = satu ayat |
-| Bottom sheet / dialog | Untuk tambah target, konfirmasi penghapusan, atau fokus review; tutup dengan tombol eksplisit dan klik backdrop bila aman |
-| Floating coach | Tombol mengambang kanan bawah; panel hanya dibuka atas permintaan pengguna |
+| Family setup | Choose how the adult is addressed, add one or more children, select each child’s icon, age, and surahs already memorised. A JSON backup can also be restored here. |
+| Home | Shows the active child, today’s targets, progress counts, saved memorisation, reviews that are ready, audio shortcut, Settings, and the Memorisation Companion. |
+| Add target | Creates either a new memorisation target or a review target. A new target can be one verse or a valid verse range. |
+| New memorisation | Leads the family through Listen, Repeat, and Connect. The current place is saved so the family can stop and return later. |
+| Review | Shows a random verse and the next verse. The guardian can play either one, shuffle the prompt, then record whether it was smooth or needs another try. |
+| Listen to Qur’an | Provides Al-Fatihah and Juz 30, Arabic text, translation, reciter choice, per-verse repeat, range playback, and playback controls. |
+| Memorisation Companion | Asks about the child’s mood and offers one small, gentle action: pause, listen, review, start a target, or make a new target. Local advice always works; AI advice is optional. |
+| Settings | Manages language, light/dark theme, guardian greeting, child profiles, practice repeats, reciter, backup import/export, welcome prompt, and full local-data reset. |
 
-## 6. Pola interaksi
+## New memorisation flow
 
-### Membuat target
+Keep the session short and clear. For each verse, use these three steps:
 
-1. Wali menekan **Tambah** di agenda hari ini.
-2. Pilih **Hafalan Baru** atau **Murojaah**.
-3. Untuk hafalan baru, pilih surat dan rentang ayat melalui katalog, isian cepat `78:1-5`, atau input batas ayat.
-4. Tampilkan preview surat dan rentang sebelum menyimpan; satu ayat juga merupakan target yang valid.
-5. Setelah tersimpan, target muncul paling atas pada agenda hari ini.
-
-Rentang hafalan baru dapat berisi satu atau lebih ayat dan selalu divalidasi terhadap jumlah ayat surat. Pesan kesalahan diletakkan dekat input dan menjelaskan format yang benar.
-
-### Tiga tahap hafalan baru
-
-| Tahap | Tujuan | Interaksi |
+| Step | Plain-language instruction | Behaviour |
 | --- | --- | --- |
-| Talaqqi | Anak mengenali bunyi ayat | Audio diputar sesuai jumlah pengulangan; lanjut otomatis ke Tikrar |
-| Tikrar | Anak menirukan bersama wali | Wali mengetuk penghitung sekali setiap pengulangan; lanjut aktif setelah target tercapai |
-| Rabt | Anak menyambungkan hafalan dari awal kartu sampai ayat yang baru dipelajari | Dimulai setelah Tikrar pada setiap ayat mulai ayat kedua; ayat pertama langsung lanjut ke Talaqqi ayat berikutnya. Target satu ayat langsung disimpan setelah Tikrar |
+| Listen / talaqqi | Listen to the reciter together. | Plays the verse for the child’s configured number of repeats. |
+| Repeat / tikrar | The adult reads slowly; the child repeats. | The adult taps the counter after each round. |
+| Connect / rabt | Help the child join the verses together. | Used after later verses and again for a completed surah range. |
 
-Di setiap tahap, tampilkan surat, rentang, progres ayat, dan tombol **Selesai untuk hari ini**. Jangan membuat pengguna merasa kehilangan data saat berhenti; sesi aktif disimpan untuk dilanjutkan. Saat semua kartu berurutan sudah menutup satu surat, jalankan Rabt surat otomatis. Rabt panjang dipecah menjadi blok maksimal 10 ayat dengan tahap sambungan antar-blok, agar surat seperti An-Naba tidak muncul sebagai satu layar 40 ayat.
+The app lets each child have their own repeat count for these steps. A one-verse target can finish after the Repeat step. For long surahs, Connect is split into blocks of up to ten verses, with a small joining step between blocks.
 
-### Murojaah dan pengulangan berjarak
+The family can choose **Finish for today** at any point. Keep the session state and let them resume it later. Do not use failure language.
 
-Murojaah menampilkan ayat soal acak dan ayat sambungannya. Sesudah wali memilih hasil:
+When a new target is complete, save it as a memorised range for that child. If the child has now covered a full surah through saved ranges, offer a full-surah connection practice first.
 
-- **Lancar** menaikkan interval menjadi `1 → 3 → 7 → 14 → 30` hari.
-- **Butuh ulang** mengembalikan interval ke awal.
+## Review and spacing
 
-Bahasa status memakai “Siap diulang” atau “Dalam N hari”, bukan istilah yang menghakimi seperti “terlambat”.
+Each saved range gets a simple spaced review schedule:
 
-### Pemutar Qur'an
+`1 day → 3 days → 7 days → 14 days → 30 days`
 
-- Mulai dari Al-Fatihah dan Juz 30; katalog dapat dicari berdasarkan nomor, nama Latin, atau Arab.
-- Ketuk kartu ayat untuk memutar dan menyorot kartu aktif.
-- Pengguna dapat memilih ulang per ayat (`1×`, `2×`, `3×`, `5×`) dan, bila diperlukan, mengunci rentang ayat beserta jumlah ulangannya.
-- Saat satu surat Juz 30 selesai tanpa rentang aktif, pemutaran dapat berlanjut ke surat berikutnya.
-- Kontrol *sebelumnya*, *putar/jeda*, *ulang*, dan *berikutnya* berada pada panel sticky saat audio aktif.
+- **Smoothly done** moves the range to the next interval.
+- **Try again** starts the interval again from the beginning.
+- Use friendly labels such as “Ready to review” and “In 3 days.” Never say “overdue” or imply failure.
+- Offer only a small number of review suggestions at once. The adult can add one to today’s plan.
 
-### Teman Hafalan
+In review, show the question verse and then the next verse as the answer. Give the child time before revealing or playing the answer. A one-verse range should explain that it has no following verse rather than showing a broken state.
 
-Saran lokal dan saran berbantuan AI perlu memprioritaskan keadaan anak, bukan daftar target.
+## Listening experience
 
-| Kondisi | Respons yang diharapkan |
+The listening page covers Al-Fatihah and all of Juz 30. It should:
+
+- Search by surah number, Latin name, or Arabic name.
+- Show Arabic text right-to-left and a translation in the selected app language.
+- Let the user choose a reciter. Ayman Sowaid is the default.
+- Let the user repeat each verse 1, 2, 3, or 5 times.
+- Let the user turn on a verse range, choose its start and end, and repeat that range 1, 2, 3, or 5 times.
+- Offer play/pause, previous, next, and replay controls with a clear active state.
+- Include Bismillah before applicable surahs and continue through the next Juz 30 surah when ordinary playback reaches the end.
+- Save listening choices on the device.
+
+Qur’an text, translations, and audio need an internet connection. The installed app shell can still open offline.
+
+## Memorisation Companion
+
+The companion starts from the child’s present condition, not a productivity target. Supported check-ins include upset, not in the mood, wants to play, tired, and ready to learn.
+
+| Situation | Helpful response |
 | --- | --- |
-| Tantrum / lelah / tidak mood | Sarankan jeda, pendampingan, dan tanpa target baru |
-| Ingin main | Tawarkan murattal dengan volume lembut sebagai teman bermain |
-| Ada murojaah jatuh tempo | Sarankan satu rentang murojaah yang pendek |
-| Belum ada target | Mulai dari Al-Fatihah, lalu An-Nas, Al-Falaq, Al-Ikhlas, dan seterusnya |
-| Target selesai dan anak siap | Tawarkan tepat satu kegiatan ringan: murojaah, hafalan baru, atau dengar Qur'an |
+| Upset, tired, or not ready | Suggest a pause, calm presence, or a cuddle. Do not suggest a new target. |
+| Wants to play | Suggest gentle recitation in the background. |
+| Review is ready | Suggest one short range to review. |
+| No memorisation yet | Suggest 1–2 verses of Al-Fatihah. |
+| Child is ready | Suggest only one suitable next action. |
+| Today is complete | Appreciate the effort and keep any next action light. |
 
-## 7. Responsif
+The local recommendation must always be useful. If `OPENAI_API_KEY` is present on the server, the app can request a short personalised version from `/api/daily-coach`. The AI must use the same action chosen by the local rule, stay brief, avoid diagnoses and guilt, and never tell users it is AI. If the request fails, keep showing local advice.
 
-Desain dimulai dari lebar ponsel. Konten utama dibatasi agar tetap nyaman dibaca dan disentuh.
+## Data, backup, and privacy
 
-| Breakpoint | Perilaku |
+Use IndexedDB for the family profile, child profiles, daily targets, memorised ranges, listening preferences, language, and companion check-ins. Session-only practice routing may use session storage.
+
+The app should keep data separated by child ID. Deleting a child removes that child’s targets, saved memorisation, and check-ins only after clear confirmation.
+
+Provide JSON export and import so a family can move to another device. Validate imports before writing them. A full reset needs a confirmation and must make it clear that an export is the only way to keep a copy.
+
+By default, no family data is sent to an app server. Qur’an text, translations, and reciter audio come from public Qur’an services as needed. Optional AI advice is the only feature that contacts the app’s server endpoint; the API key stays in the server environment.
+
+## Language, theme, and installation
+
+- Support Bahasa Indonesia and English throughout the interface.
+- Save the chosen language on the device; `VITE_APP_LOCALE` can set the first default to `id` or `en`.
+- Offer light and dark themes and save the choice on the device.
+- Make the browser install prompt easy to understand, including clear iOS “Add to Home Screen” instructions.
+- Cache the app shell so an installed app can open without a network connection. Be honest when Qur’an text or new audio still needs internet access.
+
+## Visual direction
+
+The interface should feel calm, warm, and grown-up enough for the guardian without becoming dull for a child.
+
+- Use forest green for the main action and sense of calm.
+- Use soft sage for success and quiet selection.
+- Use cream for the page background.
+- Use peach and terracotta for warm accents and gentle attention.
+- Use clear, high-contrast body text. Do not make colour the only way to explain status.
+- Use Fredoka for friendly headings, DM Sans for interface text, and a readable Arabic font for verses.
+- Give Arabic generous size, line height, and right-to-left direction.
+- Use large rounded cards, generous space, and touch targets of at least 44 × 44 px.
+- Keep one main action visible in each focused area.
+- Avoid leaderboards, streak pressure, aggressive red warnings, or language that makes a family feel guilty.
+
+## Responsive and accessible behaviour
+
+| Width | Layout |
 | --- | --- |
-| Mobile (`<640px`) | Satu kolom, padding 16px, sheet muncul dari bawah, tombol mengambang menampilkan ikon/label seperlunya |
-| Tablet (`≥640px`) | Kartu dan katalog dapat dua kolom; ruang horizontal bertambah menjadi 24px |
-| Desktop (`≥1024px`) | Beranda memakai dua kolom: agenda fleksibel dan panel hafalan tersimpan ±360px; latihan fokus tetap dibatasi sekitar 768px |
+| Phone, under 640px | One column, 16px page padding, full-width cards, controls that can wrap, and bottom sheets for focused actions. |
+| Tablet, 640px and above | More breathing room and optional two-column catalogue cards. |
+| Desktop, 1024px and above | Home can use two columns: today’s plan and a narrower saved-memorisation panel. Keep focused practice screens comfortably narrow. |
 
-Kartu ayat, teks Arab, dan kontrol audio tidak boleh memaksa scroll horizontal. Kontrol pengulangan boleh membungkus ke baris berikutnya pada layar kecil.
+Every icon-only button needs an accessible label. Dialogs need a title, clear close action, and correct dialog semantics. Use `aria-pressed` or `aria-selected` for selectable controls. Announce loading, audio, and error states in text. Respect reduced-motion preferences when adding animation.
 
-## 8. Aksesibilitas dan adab konten
+## Practical acceptance checks
 
-- Semua kontrol ikon memiliki label aksesibel; status pilihan memakai `aria-pressed` atau `aria-selected`.
-- Dialog memakai `role="dialog"`, `aria-modal`, judul terhubung, dan jalur keluar yang jelas.
-- Target sentuh minimum `44×44px`; jangan mengandalkan hover sebagai satu-satunya cara menemukan aksi.
-- Perubahan audio, pemuatan, dan error memberi status teks yang mudah dibaca pembaca layar.
-- Teks Arab memakai arah RTL, ukuran besar, dan jarak antarbaris lapang; terjemahan dipisahkan secara visual.
-- Animasi terbatas pada transisi masuk pendek, skala sentuh, dan indikator halus. Hormati `prefers-reduced-motion` saat menambah animasi baru.
-- Hindari leaderboard, streak, warna merah agresif, atau copy yang menimbulkan rasa bersalah.
-
-Nada bahasa: hangat, singkat, dan memvalidasi usaha. Contoh: “Sedikit demi sedikit, dengan hati yang gembira,” “Beri waktu anak menjawab,” dan “Memilih jeda adalah bentuk kasih sayang.”
-
-## 9. Data, privasi, dan keadaan sistem
-
-Data inti disimpan lokal melalui IndexedDB agar aplikasi tetap bersifat personal dan cepat:
-
-| Entitas | Isi utama |
-| --- | --- |
-| `profiles` | Sapaan wali, daftar anak, anak aktif, profil dan preferensi latihan anak |
-| `targets` | Jenis target, surat, rentang ayat, status, waktu dibuat, dan pemilik anak |
-| `memories` | Hafalan tersimpan, interval, waktu review terakhir/berikutnya, dan pemilik anak |
-| `preferences` | Pengulangan pemutar Qur'an dan pengaturan rentang |
-| `sessionStorage` | Target dan posisi sesi hafalan/review yang sedang dibuka |
-
-Teks dan terjemahan ayat serta audio qari membutuhkan koneksi saat belum tersedia di cache. Service worker menyimpan aplikasi dasar dan audio yang pernah diputar. UI harus membedakan keadaan **memuat**, **siap**, dan **gagal**, dengan pesan yang menenangkan serta opsi mencoba lagi.
-
-Fitur saran AI bersifat opsional: API key hanya berada di lingkungan server/deployment. Ketika layanan tidak tersedia, tampilkan saran lokal yang tetap berguna; jangan pernah meminta pengguna memasukkan API key ke antarmuka aplikasi.
-
-## 10. Pedoman implementasi visual
-
-- Gunakan token Tailwind yang telah ada: `forest`, `sage`, `cream`, `peach`, dan `terracotta`.
-- Gunakan komponen CSS bersama untuk kartu, tombol, input, kartu ayat, panel coach, dan sheet agar tampilan konsisten.
-- Gunakan ikon Lucide untuk aksi fungsional; emoji hanya untuk identitas/profil anak dan pemilihan peran.
-- Pertahankan pembeda visual yang jelas antara **Hafalan Baru** (persik/terakota) dan **Murojaah** (sage/hijau), sambil tetap mengandalkan label teks dan ikon.
-- Satu layar fokus sebaiknya memiliki satu tombol utama yang paling menonjol. Aksi destruktif menggunakan terakota dan selalu membutuhkan konfirmasi jika menghapus profil anak beserta datanya.
-
-## 11. Kriteria penerimaan desain
-
-- Wali baru dapat membuat minimal satu profil anak dan sampai di beranda tanpa kebingungan.
-- Wali dapat membuat target baru dalam maksimal empat keputusan: jenis, surat, rentang, simpan.
-- Setiap tahap hafalan menjelaskan apa yang perlu dilakukan sekarang dan menunjukkan progresnya.
-- Audio aktif selalu memiliki umpan balik visual serta kontrol untuk jeda, ulang, dan pindah ayat.
-- Murojaah dapat diselesaikan dengan satu keputusan yang jelas: **Lancar** atau **Butuh ulang**.
-- Anak yang lelah tidak pernah diarahkan untuk memaksakan hafalan oleh teks, status, maupun saran AI.
-- Layar utama tetap nyaman pada lebar 320px dan memanfaatkan ruang desktop tanpa melebarkan baris teks secara berlebihan.
+- A new guardian can add at least one child and arrive at the home screen without guessing what to do next.
+- Each child sees only their own targets, memories, repeat settings, and check-ins.
+- A target can be created in four choices or fewer: type, surah, range, save.
+- Every practice step says what to do now and how far the family has come.
+- Stopping a practice session does not lose its place.
+- A completed new target becomes a saved range with a future review date.
+- Review ends with one clear result: smooth or try again.
+- Audio clearly shows what is playing and can be paused, replayed, or moved between verses.
+- The companion never pushes a tired or upset child to continue.
+- Backup import/export, language, theme, and reciter choices work without affecting another child’s learning data.
+- The app remains comfortable at 320px wide and does not make Arabic text or audio controls scroll sideways.
