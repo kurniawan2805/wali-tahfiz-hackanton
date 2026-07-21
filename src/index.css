@@ -104,6 +104,8 @@
   .pwa-install-button { @apply flex min-h-11 shrink-0 items-center justify-center rounded-xl bg-forest px-3.5 text-sm font-bold text-white transition-[transform,background-color] duration-200 hover:bg-[#39684d] active:scale-[0.96]; }
   .pwa-install-close { @apply flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-slate-500 transition-[transform,background-color,color] duration-200 hover:bg-[#f7faf4] hover:text-forest active:scale-[0.96]; }
   .audio-control { @apply flex h-11 w-11 items-center justify-center rounded-2xl bg-[#f7faf4] text-forest transition-[transform,background-color] active:scale-[0.96]; }
+  .player-main-button { @apply flex h-12 w-12 shrink-0 items-center justify-center rounded-[18px] bg-white text-forest shadow-sm transition-[transform,background-color] duration-200 hover:bg-[#fffaf2] active:scale-[0.96]; }
+  .player-control { @apply flex h-10 w-10 items-center justify-center rounded-xl text-white transition-[transform,background-color] duration-200 hover:bg-white/15 active:scale-[0.96]; }
   .ayah-card { @apply relative overflow-hidden rounded-[26px] bg-[#fffdf8] p-5 shadow-sm transition-[transform,background-color,box-shadow] duration-200 active:scale-[0.96]; box-shadow: 0 10px 26px rgb(71 119 92 / 7%), 0 1px 2px rgb(71 119 92 / 5%); }
   .ayah-card::before { content: ''; @apply absolute inset-y-5 left-0 w-1 rounded-r-full bg-transparent transition-[background-color] duration-200; }
   .ayah-card-active { @apply bg-forest shadow-lg shadow-forest/20; box-shadow: 0 18px 34px rgb(71 119 92 / 24%), 0 2px 5px rgb(71 119 92 / 14%); }
