@@ -1614,7 +1614,7 @@ function App() {
     const phase = pathname.slice(1)
     const storedSession = readRouteData(ACTIVE_PRACTICE_SESSION_KEY)
     const session = storedSession?.targetId === target.id ? storedSession : { targetId: target.id, phase, currentAyah: target.startAyah, tikrarCount: 0 }
-    return <Suspense fallback={<RouteFallback/>}><LazyNewMemoryFlow target={target} profile={profile} phase={phase} session={session} onCancel={endPracticeForToday} onNavigate={navigate} onUpdateSession={(next) => writeRouteData(ACTIVE_PRACTICE_SESSION_KEY, next)} onFinish={(details) => finishNewTarget(target, details)} onEndSession={endPracticeForToday}/></Suspense>
+    return <Suspense fallback={<RouteFallback/>}><LazyNewMemoryFlow target={target} profile={profile} phase={phase} session={session} qariId={qariId} onCancel={endPracticeForToday} onNavigate={navigate} onUpdateSession={(next) => writeRouteData(ACTIVE_PRACTICE_SESSION_KEY, next)} onFinish={(details) => finishNewTarget(target, details)} onEndSession={endPracticeForToday}/></Suspense>
   }
   if (pathname === '/murojaah') {
     const memory = readRouteData(ACTIVE_MEMORY_KEY)
@@ -1622,7 +1622,7 @@ function App() {
       writeRouteData(ACTIVE_MEMORY_KEY, null)
       return home
     }
-    return <Suspense fallback={<RouteFallback/>}><LazyReviewPlayer memory={memory} page onClose={() => navigate('/')} onReviewed={(result) => finishReview(memory, result)}/></Suspense>
+    return <Suspense fallback={<RouteFallback/>}><LazyReviewPlayer memory={memory} page qariId={qariId} onClose={() => navigate('/')} onReviewed={(result) => finishReview(memory, result)}/></Suspense>
   }
   return <>{home}<PwaInstallPrompt/><AudioLibraryShortcut onOpen={() => navigate('/audio')}/></>
 }

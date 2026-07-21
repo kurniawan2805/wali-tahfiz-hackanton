@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
 import { ArrowLeft, Check, Pause, RotateCcw, Shuffle, Volume2 } from 'lucide-react'
+import { audioUrlForAyah, DEFAULT_QARI_ID } from './quranAudio'
 
 const childDefaults = { name: '', age: '', icon: '🌙', memorized: [], repeats: { talaqqi: 3, tikrar: 10, rabt: 1 } }
 const icons = ['🌙', '⭐', '🕌', '🌿', '🕊️', '🌸']
 const surahs = [{ id: '112', name: 'Al-Ikhlas', arabic: 'قُلْ هُوَ ٱللَّهُ أَحَدٌ', ayat: 4 }, { id: '113', name: 'Al-Falaq', arabic: 'قُلْ أَعُوذُ بِرَبِّ ٱلْفَلَقِ', ayat: 5 }, { id: '114', name: 'An-Nas', arabic: 'قُلْ أَعُوذُ بِرَبِّ ٱلنَّاسِ', ayat: 6 }]
-const audio = { 112: 'https://verses.quran.foundation/Alafasy/mp3/112001.mp3', 113: 'https://verses.quran.foundation/Alafasy/mp3/113001.mp3', 114: 'https://verses.quran.foundation/Alafasy/mp3/114001.mp3' }
 const audioSurahs = [
   { id: '1', name: 'Al-Fatihah', arabic: 'ٱلْفَاتِحَة', ayat: 7, group: 'fatihah' },
   { id: '78', name: 'An-Naba', arabic: 'ٱلنَّبَأ', ayat: 40, group: 'juz30' }, { id: '79', name: 'An-Naziat', arabic: 'ٱلنَّازِعَات', ayat: 46, group: 'juz30' },
@@ -37,7 +37,7 @@ const stripBismillah = (text, surahId, ayahNumber) => {
   return source.replace(bismillah, '').trim() || source
 }
 
-export default function ReviewPlayer({ memory, onClose, onReviewed, page = false }) {
+export default function ReviewPlayer({ memory, onClose, onReviewed, page = false, qariId = DEFAULT_QARI_ID }) {
   const audioRef = useRef(null)
   const [verses, setVerses] = useState([])
   const [questionAyah, setQuestionAyah] = useState(null)
@@ -46,7 +46,8 @@ export default function ReviewPlayer({ memory, onClose, onReviewed, page = false
   const [isLoading, setIsLoading] = useState(true)
   const [loadError, setLoadError] = useState('')
   const item = surahFor(memory.surahId)
-  const audioUrl = activeAyah ? `https://verses.quran.foundation/Alafasy/mp3/${String(memory.surahId).padStart(3, '0')}${String(activeAyah).padStart(3, '0')}.mp3` : undefined
+  const activeVerse = verses.find((ayah) => ayah.number === activeAyah)
+  const audioUrl = audioUrlForAyah(qariId, activeVerse?.globalNumber)
 
   const randomizeQuestion = () => {
     const latestQuestionAyah = memory.endAyah > memory.startAyah ? memory.endAyah - 1 : memory.startAyah
@@ -68,7 +69,7 @@ export default function ReviewPlayer({ memory, onClose, onReviewed, page = false
         if (controller.signal.aborted) return
         setVerses((payload?.data?.ayahs || [])
           .filter((ayah) => ayah.numberInSurah >= memory.startAyah && ayah.numberInSurah <= memory.endAyah)
-          .map((ayah) => ({ number: ayah.numberInSurah, text: stripBismillah(ayah.text, memory.surahId, ayah.numberInSurah) })))
+          .map((ayah) => ({ number: ayah.numberInSurah, globalNumber: ayah.number, text: stripBismillah(ayah.text, memory.surahId, ayah.numberInSurah) })))
       })
       .catch((error) => { if (!controller.signal.aborted) setLoadError(error.message || 'Teks Arab belum dapat dimuat.') })
       .finally(() => { if (!controller.signal.aborted) setIsLoading(false) })

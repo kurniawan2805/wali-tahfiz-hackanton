@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
 import { ArrowLeft, ArrowRight, Plus, RotateCcw, Volume2 } from 'lucide-react'
+import { audioUrlForAyah, DEFAULT_QARI_ID } from './quranAudio'
 
 const RABT_BLOCK_SIZE = 10
 const defaults = { repeats: { talaqqi: 3, tikrar: 10, rabt: 1 } }
 const surahs = [{ id: '112', name: 'Al-Ikhlas', arabic: 'قُلْ هُوَ ٱللَّهُ أَحَدٌ', ayat: 4 }, { id: '113', name: 'Al-Falaq', arabic: 'قُلْ أَعُوذُ بِرَبِّ ٱلْفَلَقِ', ayat: 5 }, { id: '114', name: 'An-Nas', arabic: 'قُلْ أَعُوذُ بِرَبِّ ٱلنَّاسِ', ayat: 6 }]
-const audio = { 112: 'https://verses.quran.foundation/Alafasy/mp3/112001.mp3', 113: 'https://verses.quran.foundation/Alafasy/mp3/113001.mp3', 114: 'https://verses.quran.foundation/Alafasy/mp3/114001.mp3' }
 const audioSurahs = [
   { id: '1', name: 'Al-Fatihah', arabic: 'ٱلْفَاتِحَة', ayat: 7, group: 'fatihah' },
   { id: '78', name: 'An-Naba', arabic: 'ٱلنَّبَأ', ayat: 40, group: 'juz30' }, { id: '79', name: 'An-Naziat', arabic: 'ٱلنَّازِعَات', ayat: 46, group: 'juz30' },
@@ -58,7 +58,7 @@ function TikrarFruitCounter({ count, target }) {
   </div>
 }
 
-export default function NewMemoryFlow({ target, profile, phase, session, onCancel, onNavigate, onUpdateSession, onFinish, onEndSession }) {
+export default function NewMemoryFlow({ target, profile, phase, session, onCancel, onNavigate, onUpdateSession, onFinish, onEndSession, qariId = DEFAULT_QARI_ID }) {
   const audioRef = useRef(null)
   const talaqqiPlaybackRef = useRef(0)
   const [practice, setPractice] = useState(() => ({ ...session, phase }))
@@ -85,7 +85,8 @@ export default function NewMemoryFlow({ target, profile, phase, session, onCance
   const rabtDisplayStart = rabtStep?.startAyah || rabtStartAyah
   const rabtDisplayEnd = rabtStep?.endAyah || rabtEndAyah
   const sourceAyah = phase === 'rabt' && rangeAudioAyah ? rangeAudioAyah : activeAyah
-  const audioUrl = `https://verses.quran.foundation/Alafasy/mp3/${String(target.surahId).padStart(3, '0')}${String(sourceAyah).padStart(3, '0')}.mp3`
+  const sourceVerse = verses.find((ayah) => ayah.number === sourceAyah)
+  const audioUrl = audioUrlForAyah(qariId, sourceVerse?.globalNumber)
   const rangeVerses = verses.filter((ayah) => ayah.number >= rabtDisplayStart && ayah.number <= rabtDisplayEnd)
   const updatePractice = (changes) => {
     const next = { ...practice, ...changes, targetId: target.id }
@@ -111,7 +112,7 @@ export default function NewMemoryFlow({ target, profile, phase, session, onCance
       .then((response) => { if (!response.ok) throw new Error('Ayat tidak dapat dimuat.') ; return response.json() })
       .then((payload) => {
         if (controller.signal.aborted) return
-        const nextVerses = (payload?.data?.ayahs || []).map((ayah) => ({ number: ayah.numberInSurah, text: stripBismillah(ayah.text, target.surahId, ayah.numberInSurah) }))
+        const nextVerses = (payload?.data?.ayahs || []).map((ayah) => ({ number: ayah.numberInSurah, globalNumber: ayah.number, text: stripBismillah(ayah.text, target.surahId, ayah.numberInSurah) }))
         if (!nextVerses.length) throw new Error('Ayat tidak ditemukan.')
         setVerses(nextVerses)
       })
