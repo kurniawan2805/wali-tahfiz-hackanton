@@ -1,6 +1,7 @@
 import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import { ArrowLeft, ArrowRight, Baby, Bot, CalendarDays, Check, ChevronDown, CircleCheck, Clock3, Download, Headphones, Leaf, Pause, Play, Plus, RotateCcw, Search, Send, Settings, Share, Shuffle, SkipBack, SkipForward, SlidersHorizontal, Sparkles, Trash2, Upload, UserRound, Volume2, X } from 'lucide-react'
-import { clearAllData, createBackup, db, getProfile, getQuranRange, getQuranRepeat, getTargetsForDay, getTargetsForMemory, hasLegacyStorage, migrateLegacyStorage, normalizeFamilyProfile, restoreBackup, saveProfile, saveQuranRange, saveQuranRepeat } from './db'
+import { clearAllData, createBackup, db, getProfile, getQuranQari, getQuranRange, getQuranRepeat, getTargetsForDay, getTargetsForMemory, hasLegacyStorage, migrateLegacyStorage, normalizeFamilyProfile, restoreBackup, saveProfile, saveQuranQari, saveQuranRange, saveQuranRepeat } from './db'
+import { DEFAULT_QARI_ID, qariFor } from './quranAudio'
 import { createCoachCheckin, isPersonalAdvice, readinessForCondition } from './coachCheckin'
 import { createScheduledMemory, getReviewRecommendations, hasReviewTargetForToday, isCreatedToday, localDateKey, reviewDueLabel, scheduleReviewResult } from './reviewSchedule'
 
@@ -1485,6 +1486,7 @@ function LegacyApp() {
 function App() {
   const [family, setFamily] = useState(null)
   const [isReady, setIsReady] = useState(false)
+  const [qariId, setQariId] = useState(DEFAULT_QARI_ID)
   // The coach remains available from its floating button. Opening the full
   // dialog on every cold visit delays the home screen's largest paint.
   const initialCoachVisitRef = useRef(false)
@@ -1492,9 +1494,10 @@ function App() {
   useEffect(() => {
     let active = true
     const profileLoad = hasLegacyStorage() ? migrateLegacyStorage().then(getProfile) : getProfile()
-    profileLoad.then((saved) => {
+    Promise.all([profileLoad, getQuranQari()]).then(([saved, savedQari]) => {
       if (!active || !saved) return
       setFamily(normalizeFamilyProfile(saved))
+      setQariId(qariFor(savedQari?.value).id)
     }).catch(() => {}).finally(() => { if (active) setIsReady(true) })
     return () => { active = false }
   }, [])
@@ -1599,8 +1602,8 @@ function App() {
   const home = profile ? <Home profile={profile} family={family} onSelectChild={selectChild} settings={() => navigate('/settings')} audioLibrary={() => navigate('/audio')} openPractice={openPractice} openReview={openReview} autoOpenCoach={initialCoachVisitRef.current} onAutoCoachOpened={() => { initialCoachVisitRef.current = false }}/> : null
   if (!isReady) return <main className="flex min-h-screen items-center justify-center bg-cream"><p className="font-display text-xl text-forest">Menyiapkan data keluarga…</p></main>
   if (!family || !profile) return <Onboarding save={saveFamily} onImport={importData}/>
-  if (pathname === '/settings') return <Suspense fallback={<RouteFallback/>}><LazySettingsPage family={family} save={saveFamily} back={() => navigate('/')} onExport={exportData} onImport={importData} onReset={resetData} ui={{ ChildEditor, ChildList, PageHeader, RolePicker }}/></Suspense>
-  if (pathname === '/audio') return <Suspense fallback={<RouteFallback/>}><LazyQuranRangePage back={() => navigate('/')}/></Suspense>
+  if (pathname === '/settings') return <Suspense fallback={<RouteFallback/>}><LazySettingsPage family={family} save={saveFamily} back={() => navigate('/')} onExport={exportData} onImport={importData} onReset={resetData} qariId={qariId} saveQari={async (nextQariId) => { const normalized = qariFor(nextQariId).id; await saveQuranQari(normalized); setQariId(normalized) }} ui={{ ChildEditor, ChildList, PageHeader, RolePicker }}/></Suspense>
+  if (pathname === '/audio') return <Suspense fallback={<RouteFallback/>}><LazyQuranRangePage back={() => navigate('/')} qariId={qariId} onQariChange={async (nextQariId) => { const normalized = qariFor(nextQariId).id; await saveQuranQari(normalized); setQariId(normalized) }}/></Suspense>
   if (['/talaqqi', '/tikrar', '/rabt'].includes(pathname)) {
     const target = readRouteData(ACTIVE_TARGET_KEY)
     if (!target || target.childId !== profile.id) {

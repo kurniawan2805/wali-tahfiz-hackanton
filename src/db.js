@@ -169,6 +169,8 @@ export const getQuranRepeat = () => db.preferences.get('quran-repeat')
 export const saveQuranRepeat = (value) => db.preferences.put({ key: 'quran-repeat', value })
 export const getQuranRange = () => db.preferences.get('quran-range')
 export const saveQuranRange = (value) => db.preferences.put({ key: 'quran-range', value })
+export const getQuranQari = () => db.preferences.get('quran-qari')
+export const saveQuranQari = (value) => db.preferences.put({ key: 'quran-qari', value })
 
 export function localDayBounds(day) {
   const start = new Date(`${day}T00:00:00`)

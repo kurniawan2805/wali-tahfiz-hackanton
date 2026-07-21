@@ -243,6 +243,7 @@
   .settings-overview::after { content: ''; @apply pointer-events-none absolute -bottom-12 -right-9 h-36 w-36 rounded-full bg-white/10; }
   .settings-overview-icon { @apply relative z-10 flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white/15 text-peach; }
   .settings-section { @apply mt-5 p-5 sm:p-6; }
+  .settings-qari-select { @apply min-h-12 w-full rounded-2xl border-0 bg-[#eff6eb] px-4 text-sm font-bold text-forest shadow-[inset_0_1px_0_rgba(255,255,255,.8),0_7px_18px_rgba(71,119,92,.08)]; }
   .settings-section-heading > p:last-child { @apply mt-1 text-sm leading-relaxed text-slate-500; }
   .settings-add-button { @apply flex min-h-11 shrink-0 items-center gap-1.5 rounded-2xl bg-forest px-3.5 text-sm font-bold text-white shadow-sm shadow-forest/20 transition-[transform,background-color] duration-200 hover:bg-[#39684d] active:scale-[0.96]; }
   .settings-editor { @apply mt-6 border-t border-sage/70 pt-5; }
