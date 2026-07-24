@@ -1,5 +1,6 @@
 import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import { ArrowLeft, ArrowRight, Baby, Bot, CalendarDays, Check, ChevronDown, CircleCheck, Clock3, Download, Headphones, Leaf, Pause, Play, Plus, RotateCcw, Search, Send, Settings, Share, Shuffle, SkipBack, SkipForward, SlidersHorizontal, Sparkles, Trash2, Upload, UserRound, Volume2, X } from 'lucide-react'
+import { Analytics } from '@vercel/analytics/react'
 import { clearAllData, createBackup, db, getProfile, getQuranQari, getQuranRange, getQuranRepeat, getTargetsForDay, getTargetsForMemory, hasLegacyStorage, migrateLegacyStorage, normalizeFamilyProfile, restoreBackup, saveProfile, saveQuranQari, saveQuranRange, saveQuranRepeat } from './db'
 import { DEFAULT_QARI_ID, qariFor } from './quranAudio'
 import { createCoachCheckin, isPersonalAdvice, readinessForCondition } from './coachCheckin'
@@ -1480,7 +1481,7 @@ function LegacyApp() {
     if (!memory) return <Home profile={profile} settings={() => navigate('/settings')} audioLibrary={() => navigate('/audio')} openPractice={openPractice} openReview={openReview}/>
     return <Suspense fallback={<RouteFallback/>}><LazyReviewPlayer memory={memory} page onClose={() => navigate('/')} onReviewed={(result) => finishReview(memory, result)}/></Suspense>
   }
-  return <><Home profile={profile} settings={() => navigate('/settings')} audioLibrary={() => navigate('/audio')} openPractice={openPractice} openReview={openReview}/><AudioLibraryShortcut onOpen={() => navigate('/audio')}/></>
+  return <><Home profile={profile} settings={() => navigate('/settings')} audioLibrary={() => navigate('/audio')} openPractice={openPractice} openReview={openReview}/><AudioLibraryShortcut onOpen={() => navigate('/audio')}/><Analytics /></>
 }
 
 function App() {
@@ -1624,7 +1625,7 @@ function App() {
     }
     return <Suspense fallback={<RouteFallback/>}><LazyReviewPlayer memory={memory} page qariId={qariId} onClose={() => navigate('/')} onReviewed={(result) => finishReview(memory, result)}/></Suspense>
   }
-  return <>{home}<PwaInstallPrompt/><AudioLibraryShortcut onOpen={() => navigate('/audio')}/></>
+  return <>{home}<PwaInstallPrompt/><AudioLibraryShortcut onOpen={() => navigate('/audio')}/><Analytics /></>
 }
 
 export default App
