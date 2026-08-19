@@ -191,3 +191,16 @@ export function getTargetsForDay(childId, day) {
 }
 
 export const getTargetsForMemory = (childId, memoryId) => db.targets.where('[childId+memoryId]').equals([childId, memoryId]).toArray()
+
+
+export async function getAllMemoriesForChild(childId) {
+  if (!childId) return []
+  const list = await db.memories.where('childId').equals(childId).toArray()
+  return list.sort((a, b) => Number(a.surahId) - Number(b.surahId) || a.startAyah - b.startAyah)
+}
+
+export async function getAllTargetsForChild(childId) {
+  if (!childId) return []
+  const list = await db.targets.where('childId').equals(childId).toArray()
+  return list.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0))
+}

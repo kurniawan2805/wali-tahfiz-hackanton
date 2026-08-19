@@ -69,9 +69,9 @@ The family can choose **Finish for today** at any point. Keep the session state 
 
 When a new target is complete, save it as a memorised range for that child. If the child has now covered a full surah through saved ranges, offer a full-surah connection practice first.
 
-## Review and spacing
+## Review and spacing (Murojaah Hafalan Tersimpan)
 
-Each saved range gets a simple spaced review schedule:
+Jadwal Spaced Review (pengulangan berkala) berlaku khusus untuk **hafalan yang sudah tuntas tersimpan** (*memorised ranges*), bukan saat proses hafalan baru. Setiap rentang hafalan tersimpan mendapatkan jadwal murojaah otomatis:
 
 `1 day → 3 days → 7 days → 14 days → 30 days`
 
@@ -110,6 +110,8 @@ The companion starts from the child’s present condition, not a productivity ta
 | Child is ready | Suggest only one suitable next action. |
 | Today is complete | Appreciate the effort and keep any next action light. |
 
+The companion also provides a direct action button **"Catat Hafalan Hari Ini (Tanpa Program)"** so guardians can log new memorisation or review practiced independently today without having to launch the full guided step-by-step practice session.
+
 The local recommendation must always be useful. If `OPENAI_API_KEY` is present on the server, the app can request a short personalised version from `/api/daily-coach`. The AI must use the same action chosen by the local rule, stay brief, avoid diagnoses and guilt, and never tell users it is AI. If the request fails, keep showing local advice.
 
 ## Data, backup, and privacy
@@ -130,30 +132,123 @@ By default, no family data is sent to an app server. Qur’an text, translations
 - Make the browser install prompt easy to understand, including clear iOS “Add to Home Screen” instructions.
 - Cache the app shell so an installed app can open without a network connection. Be honest when Qur’an text or new audio still needs internet access.
 
-## Visual direction
+## Light and Dark Theme System
 
-The interface should feel calm, warm, and grown-up enough for the guardian without becoming dull for a child.
+The design uses a warm, organic color system inspired by nature (Forest, Sage, Cream, Peach, Terracotta) to create a serene environment for spiritual study. Light and dark modes are treated as equal design surfaces, keeping identical visual hierarchy and contrast guarantees across both themes.
 
-- Use forest green for the main action and sense of calm.
-- Use soft sage for success and quiet selection.
-- Use cream for the page background.
-- Use peach and terracotta for warm accents and gentle attention.
-- Use clear, high-contrast body text. Do not make colour the only way to explain status.
-- Use Fredoka for friendly headings, DM Sans for interface text, and a readable Arabic font for verses.
-- Give Arabic generous size, line height, and right-to-left direction.
-- Use large rounded cards, generous space, and touch targets of at least 44 × 44 px.
-- Keep one main action visible in each focused area.
-- Avoid leaderboards, streak pressure, aggressive red warnings, or language that makes a family feel guilty.
+### Theme Palette & CSS Variables
 
-## Responsive and accessible behaviour
+| Token | Semantic Role | Light Mode Value | Dark Mode Value |
+| --- | --- | --- | --- |
+| `--color-canvas` | Base page background | HSL `43 100% 97%` (`#FDFBF7`) | HSL `154 22% 9%` (`#0C1311`) |
+| `--color-surface` | Primary card / container | HSL `0 0% 100%` (`#FFFFFF`) | HSL `155 20% 13%` (`#16211E`) |
+| `--color-surface-raised` | Raised element / modal sheet | HSL `86 33% 98%` (`#F7FAF4`) | HSL `155 18% 16%` (`#1A2824`) |
+| `--color-surface-muted` | Subtitle / background fill | HSL `106 29% 95%` (`#EFF6EB`) | HSL `153 17% 19%` (`#131F1C`) |
+| `--color-forest` | Main brand action / title | HSL `144 37% 31%` (`#47775C`) | HSL `137 42% 70%` (`#89D4A7`) |
+| `--color-sage` | Secondary fill / border / badge | HSL `120 30% 88%` (`#DCEBDC`) | HSL `140 23% 28%` (`#305C41`) |
+| `--color-peach` | Warm accent / rosette background | HSL `32 100% 88%` (`#FFE5C4`) | HSL `33 75% 72%` (`#F4C38A`) |
+| `--color-terracotta` | High-signal focus / active accent | HSL `21 65% 30%` (`#BD6F45`) | HSL `20 75% 75%` (`#F2A882`) |
+| `--color-ink` | Primary text / body content | HSL `153 20% 20%` (`#293B33`) | HSL `126 25% 93%` (`#E6F4EC`) |
+| `--color-muted` | Muted copy / captions | HSL `153 20% 25%` (`#334155`) | HSL `139 20% 80%` (`#B3D1C1`) |
+| `--color-border` | Subtle structural dividers | HSL `126 23% 78%` (`#C0DCC0`) | HSL `149 15% 29%` (`#3C584A`) |
 
-| Width | Layout |
+### Surface Styling & Elevation
+
+- **Light Theme Surface:** Features a double radial ambient background gradient (`hsl(var(--color-sage) / .62)` at top-left, `hsl(var(--color-peach) / .28)` at top-right). Cards use `bg-white` with multi-layered soft shadows (`box-shadow: 0 18px 55px rgba(71,119,92,.10), 0 2px 5px rgba(71,119,92,.04)`).
+- **Dark Theme Surface:** Replaces elevation shadows with soft emerald-tinted borders (`border border-emerald-900/40`) on deep dark green surfaces (`#0C1311` canvas, `#16211E` card surface, `#1A2824` raised panels). This eliminates OLED harsh glare while retaining spatial depth.
+- **Glassmorphism:** Coach panels and sticky bottom nav bars use `backdrop-blur-md` with `bg-white/95` (light) and `bg-[#0C1311]/90` (dark) to maintain context during scroll.
+
+### Contrast Matrix & Accessibility (WCAG AA)
+
+- **Body Text:** Primary body text (`--color-ink`) maintains at least a 7:1 contrast ratio against `--color-canvas` and `--color-surface` in both light and dark modes.
+- **Secondary & Muted Copy:** Muted text (`--color-muted`) maintains at least 4.5:1 contrast ratio.
+- **Large Headlines & Icons:** Headers (`--color-forest`) and key interactive icons maintain a minimum 3:1 ratio (exceeding 4.5:1 on standard backgrounds).
+- **Interactive State Pairs:** When elements hover, focus, or activate, text and background colors are adjusted together as a pair. Contrast never decreases on hover/active states.
+- **Color Independence:** Status is never communicated by color alone. Every badge or state combines color with an explicit text label (e.g., "Ready for review", "In 3 days") or distinct visual mark.
+
+### Dynamic PWA Theme Synchronization
+
+Theme switches apply immediately across the entire DOM tree:
+1. `document.documentElement` and `document.body` both toggle the `.dark` class.
+2. `data-theme` attribute and `color-scheme` style property update to `light` or `dark`.
+3. `<meta name="theme-color">` updates dynamically (`#FDFBF7` in light mode, `#0C1311` in dark mode) so the OS browser header and PWA status bar seamlessly match the app frame.
+4. Preference is saved to `localStorage` under key `wali-tahfiz:theme` and defaults to system preference (`prefers-color-scheme: dark`) when first unconfigured.
+
+## Animation and Motion System
+
+Motion in Wali Tahfiz is designed to feel physical, organic, and peaceful. Animations guide the child and parent between steps without inducing excitement or urgency.
+
+### Motion Principles
+
+1. **Spatial Continuity:** Components expand or slide from their originating point (e.g., bottom sheets slide from the bottom edge; coach panel pops up from the floating FAB).
+2. **Short & Decisive:** Micro-interactions execute within 150–200ms so the interface responds instantly without lagging behind touch inputs.
+3. **Calming Easing:** Use smooth cubic-bezier curves (`cubic-bezier(0.2, 0, 0, 1)`) with zero bounce or exaggerated wobble.
+4. **Performance First:** Animate GPU-accelerated CSS properties only (`transform` and `opacity`). Never animate `width`, `height`, or `margin` layout properties directly.
+
+### Core Motion Specifications
+
+| Motion Type | Class / Keyframes | Duration & Easing | Behaviour & Trigger |
+| --- | --- | --- | --- |
+| **Tactile Tap / Press** | `active:scale-[0.96]` | 150ms `cubic-bezier(0.2,0,0,1)` | Applies to all primary buttons, cards, choice chips, and back controls to simulate physical tactile response. |
+| **Phase Transition** | `.phase-in` / `@keyframes phase-in` | 320ms `cubic-bezier(0.2,0,0,1)` | Smooth 8px vertical upward slide and opacity fade-in when switching between Talaqqi, Tikrar, and Rabt steps. |
+| **Coach Sheet Entrance** | `.coach-panel` / `@keyframes coach-in` | 220ms `cubic-bezier(0.2,0,0,1)` | Slide up from bottom with subtle scale expansion (`scale(0.98)` to `scale(1)`). |
+| **PWA Install Prompt** | `.pwa-install-prompt` / `@keyframes pwa-install-in` | 260ms `cubic-bezier(0.2,0,0,1)` | Floating entrance from bottom right edge (`translateY(8px)` to `translateY(0)`). |
+| **Chat Message Bubble** | `.coach-message` / `@keyframes coach-message-in` | 180ms `cubic-bezier(0.2,0,0,1)` | Staggered fade and slide for companion advice responses. |
+| **Ambient Attention** | `.coach-pulse` / `@keyframes coach-pulse` | 1.8s `ease-in-out infinite` | Gentle scale pulse (`scale(1)` to `scale(1.35)`) with opacity ring for the companion prompt notification dot. |
+| **Progress Fill** | `.parent-record-fill` | 300ms `ease-out` | Smooth width percentage transition on repetition progress bars when guardian taps repeat count. |
+| **Ayah Card Hover** | `.ayah-card:hover` | 200ms `ease` | Subtle `-translate-y-0.5` lift with enhanced shadow on desktop devices with hover support. |
+
+### Accessibility & Reduced Motion
+
+The app honors user device motion accessibility settings via `@media (prefers-reduced-motion: reduce)`:
+- Sets `transition-duration: 0ms` for all cards, buttons, panels, phase containers, and progress bars.
+- Disables `@keyframes` animations (`phase-in`, `coach-in`, `pwa-install-in`, `coach-pulse`).
+- Instant state changes occur without visual movement or displacement, preventing motion sickness or distraction.
+
+## UI/UX Architecture and Interaction Craft
+
+Wali Tahfiz pairs child-friendly simplicity with clear adult controls. Layouts are designed mobile-first, ensuring high comfort on small touch screens while taking advantage of tablet and desktop viewports.
+
+### Typography Stack & Hierarchy
+
+| Usage | Font Family | Fallback Stack | Sizing & Styling |
+| --- | --- | --- | --- |
+| **Headings & Display** | **Fredoka** | `Arial Rounded MT Bold`, `sans-serif` | Friendly, rounded weight (500–700). Sized 24px–36px (`text-2xl` to `text-4xl`). |
+| **UI & Body Copy** | **DM Sans** | `system-ui`, `-apple-system`, `Segoe UI`, `Arial`, `sans-serif` | Clean, highly legible sans-serif (400–700). Base body 14px–16px, captions 11px–12px with high letter-spacing. |
+| **Qur'anic Verses (RTL)** | **Amiri Quran** | `'Amiri'`, `serif` | Embedded WOFF2 Arabic font. Sized generous 28px–34px on phone, 36px–44px on tablet/desktop. Line-height fixed to `2.2`, `font-synthesis: none`, `font-variant-ligatures: common-ligatures contextual`, `text-rendering: optimizeLegibility`. |
+
+### Ergonomics & Touch Target Budget
+
+- **Minimum Touch Target:** Every interactive element (buttons, chips, checkboxes, icon controls, ayah cards) has a touch surface of at least `44 × 44 px`.
+- **Primary CTA Height:** Main action buttons (`.primary-button`, `.primary-button-audio`) have a minimum height of `48px` to `56px` with rounded 18px–24px corners.
+- **Safe Area Management:** Fixed floating elements (Coach FAB, Settings save bar, PWA install toast) respect OS safe area padding (`env(safe-area-inset-bottom)`).
+- **Focus Rings:** All keyboard-focusable controls feature high-contrast focus rings (`focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2`).
+
+### Child-First & Non-Punitive UX Philosophy
+
+- **Warm Vocabulary:** Avoid industrial or gamified terminology. Use terms like *Wali* (guardian), *Anak* (child), *Hafalan* (memorization), *Murojaah* (review), *Lancar* (fluent), and *Siap diulang* (ready for review).
+- **No Pressure:** Do not include streaks, leaderboards, timers, late warnings, or red error banners. If a session is interrupted, offer "Finish for today" ("Selesai dulu hari ini") and preserve progress state.
+- **Guardian Control:** The adult makes evaluation decisions (recording whether recitation was smooth or needs another try). The adult guides the session.
+
+### Iconography & Visual Assets
+
+- **Lucide SVG Icons:** Built-in vector icons (`lucide-react`) are used for functional controls (Navigation, Audio Playback, Settings, Add, Trash).
+- **No Action Emojis:** Emojis are reserved strictly for child profiles and mood check-in illustrations. Functional buttons always use crisp SVG icons.
+- **Accessible Labels:** Icon-only buttons must provide an explicit `aria-label` attribute describing the exact action (e.g., `aria-label="Kembali ke beranda"`, `aria-label="Putar audio ayat"`).
+
+### PWA Offline & Installation Experience
+
+- **Offline First Shell:** App shell assets (HTML, CSS, JS bundle, fonts) are cached via Service Worker so the PWA opens instantly without an active network connection.
+- **Graceful Network Boundaries:** Audio recitations and live Qur'an verse fetching show clear, friendly inline status indicators when internet connectivity is required.
+- **Unobtrusive Install Prompt:** The install banner appears as a soft floating toast at the bottom right. On iOS devices, it provides clear step-by-step visual guidance for "Add to Home Screen" via Safari share menu.
+
+## Responsive Layout Architecture
+
+| Width Breakpoint | Layout Strategy |
 | --- | --- |
-| Phone, under 640px | One column, 16px page padding, full-width cards, controls that can wrap, and bottom sheets for focused actions. |
-| Tablet, 640px and above | More breathing room and optional two-column catalogue cards. |
-| Desktop, 1024px and above | Home can use two columns: today’s plan and a narrower saved-memorisation panel. Keep focused practice screens comfortably narrow. |
-
-Every icon-only button needs an accessible label. Dialogs need a title, clear close action, and correct dialog semantics. Use `aria-pressed` or `aria-selected` for selectable controls. Announce loading, audio, and error states in text. Respect reduced-motion preferences when adding animation.
+| **Phone (<640px)** | Single-column linear layout. 16px page padding. Full-width cards. Controls wrap cleanly. Modals and coach conversations open as bottom sheets. |
+| **Tablet (640px - 1023px)** | Expanded padding (24px). Two-column card grids for surah catalogue and target choices. Home hero switches to split header and child switcher layout. |
+| **Desktop (≥1024px)** | Home screen uses two-column split (Main plan & targets on left ~65%, Saved memorization & stats on right ~35%). Practice screens remain centered and comfortably narrow (max 768px) to minimize eye fatigue during recitation. |
 
 ## Practical acceptance checks
 
@@ -167,4 +262,6 @@ Every icon-only button needs an accessible label. Dialogs need a title, clear cl
 - Audio clearly shows what is playing and can be paused, replayed, or moved between verses.
 - The companion never pushes a tired or upset child to continue.
 - Backup import/export, language, theme, and reciter choices work without affecting another child’s learning data.
+- Light and dark themes switch seamlessly, updating colors, shadows, borders, text contrast, and system status bar meta colors.
+- Animations run smoothly at 60fps on mobile without layout thrashing, and respect prefers-reduced-motion.
 - The app remains comfortable at 320px wide and does not make Arabic text or audio controls scroll sideways.

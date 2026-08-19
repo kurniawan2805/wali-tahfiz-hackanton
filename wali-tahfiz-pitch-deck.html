@@ -1,0 +1,574 @@
+<!doctype html>
+<html lang="id" class="h-full"><head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Wali Tahfiz — Pitch Deck Presentation</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+  <link href="https://fonts.googleapis.com/css2?family=Amiri+Quran&amp;family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&amp;family=Fredoka:wght@400..700&amp;display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            cream: '#fff9ed',
+            forest: {
+              DEFAULT: '#47775c',
+              dark: '#355944',
+              light: '#5a9474',
+              surface: '#2d4d3c'
+            },
+            terracotta: {
+              DEFAULT: '#bd6f45',
+              light: '#d4885f',
+              dark: '#9c5632'
+            },
+            peach: {
+              DEFAULT: '#ffe5c4',
+              dark: '#f0ceaa'
+            },
+            sage: {
+              DEFAULT: '#dcebdc',
+              light: '#edf5ed',
+              dark: '#223d2e'
+            },
+            slate: '#334155'
+          },
+          fontFamily: {
+            display: ['Fredoka', 'Arial Rounded MT Bold', 'sans-serif'],
+            body: ['DM Sans', 'system-ui', 'sans-serif'],
+            arabic: ['Amiri Quran', 'Amiri', 'serif']
+          },
+          boxShadow: {
+            soft: '0 18px 55px rgba(71, 119, 92, 0.12), 0 2px 5px rgba(71, 119, 92, 0.04)',
+            glow: '0 0 40px rgba(189, 111, 69, 0.25)',
+            deep: '0 25px 60px -15px rgba(0, 0, 0, 0.3)'
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    :root {
+      --bg-cream: #fff9ed;
+      --fg-forest: #47775c;
+      --accent-terracotta: #bd6f45;
+      --accent-peach: #ffe5c4;
+      --surface-sage: #dcebdc;
+      --muted-slate: #334155;
+    }
+    body {
+      font-family: 'DM Sans', system-ui, sans-serif;
+      background-color: #121d1a;
+      color: #fff9ed;
+      overflow: hidden;
+      -webkit-font-smoothing: antialiased;
+    }
+    .font-display { font-family: 'Fredoka', 'Arial Rounded MT Bold', sans-serif; }
+    .font-arabic { font-family: 'Amiri Quran', 'Amiri', serif; line-height: 2.2; }
+
+    .slide-viewport {
+      aspect-ratio: 16 / 9;
+      max-width: 100vw;
+      max-height: 100vh;
+    }
+
+    .slide {
+      display: none;
+      opacity: 0;
+      transform: scale(0.98) translateY(10px);
+      transition: opacity 350ms cubic-bezier(0.2, 0, 0, 1), transform 350ms cubic-bezier(0.2, 0, 0, 1);
+    }
+    .slide.active {
+      display: flex;
+      opacity: 1;
+      transform: scale(1) translateY(0);
+    }
+
+    .ambient-bg {
+      background-image:
+        radial-gradient(circle at 10% 10%, rgba(220, 235, 220, 0.45) 0%, transparent 40%),
+        radial-gradient(circle at 90% 85%, rgba(255, 229, 196, 0.35) 0%, transparent 35%);
+    }
+
+    .dark .ambient-bg {
+      background-image:
+        radial-gradient(circle at 10% 10%, rgba(48, 92, 65, 0.3) 0%, transparent 40%),
+        radial-gradient(circle at 90% 85%, rgba(189, 111, 69, 0.15) 0%, transparent 35%);
+    }
+
+    .tracking-caps { letter-spacing: 0.08em; }
+
+    @media (prefers-reduced-motion: reduce) {
+      .slide { transition: none !important; }
+    }
+  </style>
+</head>
+<body class="h-screen w-screen flex flex-col justify-between select-none">
+
+  <!-- Top Progress Bar -->
+  <div class="fixed top-0 left-0 right-0 h-1.5 bg-forest-surface/30 z-50">
+    <div id="progress-bar" class="h-full bg-terracotta transition-all duration-300 ease-out" style="width: 20%;"></div>
+  </div>
+
+  <!-- Header Navigation -->
+  <header class="fixed top-3 left-0 right-0 px-8 py-3 flex items-center justify-between z-40">
+    <div class="flex items-center gap-3">
+      <div class="h-10 w-10 rounded-2xl bg-forest flex items-center justify-center shadow-md border border-white/20">
+        <svg class="h-5 w-5 text-peach" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
+        </svg>
+      </div>
+      <span class="font-display text-xl font-bold text-cream tracking-wide">Wali Tahfiz</span>
+      <span class="text-xs uppercase font-bold tracking-widest px-2.5 py-1 rounded-full bg-forest/40 text-sage border border-forest-light/30">Pitch Deck</span>
+    </div>
+
+    <div class="flex items-center gap-3">
+      <button id="theme-toggle" aria-label="Ganti Tema" class="h-10 px-3.5 rounded-xl bg-white/10 hover:bg-white/20 text-cream text-xs font-semibold flex items-center gap-2 border border-white/10 transition active:scale-95">
+        <svg id="theme-icon" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path>
+        </svg>
+        <span id="theme-text">Light Mode</span>
+      </button>
+
+      <button id="fullscreen-toggle" aria-label="Layar Penuh" class="h-10 w-10 rounded-xl bg-white/10 hover:bg-white/20 text-cream flex items-center justify-center border border-white/10 transition active:scale-95">
+        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 4l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"></path>
+        </svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- Main Presentation Canvas Container -->
+  <main class="flex-1 flex items-center justify-center p-4 sm:p-8 pt-16 pb-20">
+    <div id="deck-container" class="relative w-full max-w-[1440px] aspect-[16/9] max-h-[85vh] rounded-[36px] overflow-hidden shadow-deep border border-white/10 bg-cream text-slate transition-colors duration-300">
+
+      <!-- Slide 1: Cover / Introduction -->
+      <section data-od-id="slide-cover" class="slide active w-full h-full p-12 lg:p-16 flex-col justify-between bg-cream ambient-bg relative overflow-hidden">
+        <div class="absolute -right-20 -top-20 w-96 h-96 rounded-full bg-peach/50 blur-3xl pointer-events-none"></div>
+        <div class="absolute -left-20 -bottom-20 w-96 h-96 rounded-full bg-sage/60 blur-3xl pointer-events-none"></div>
+
+        <div class="relative z-10 flex items-center justify-between">
+
+
+        </div>
+
+        <div class="relative z-10 max-w-4xl space-y-6">
+          <h1 class="font-display text-5xl lg:text-7xl font-bold text-forest leading-[1.08] tracking-tight" style="width: 1064.1px;">
+            Pendamping Hafalan Al-Qur'an Keluarga yang <span class="text-terracotta underline decoration-peach decoration-4 underline-offset-8">Hangat &amp; Konsisten</span>
+          </h1>
+          <p class="text-xl lg:text-2xl text-slate/85 leading-relaxed font-medium max-w-3xl" style="width: 980.8px;">
+            Banyak keluarga ingin menemani anak menghafal Al-Qur'an, tetapi yang dibutuhkan bukan tekanan baru. Wali Tahfiz hadir membantu Ayah &amp; Bunda melalui langkah kecil yang penuh kasih sayang.
+          </p>
+        </div>
+
+        <div class="relative z-10 flex items-center justify-between border-t border-forest/15 pt-6">
+          <div class="flex items-center gap-8 text-sm font-semibold text-slate/70">
+            <span class="flex items-center gap-2"><strong class="text-forest">Fokus:</strong> Juz 30 &amp; Al-Fatihah</span>
+            <span class="flex items-center gap-2"><strong class="text-forest">Metode:</strong> Talaqqi · Tikrar · Rabt</span>
+            <span class="flex items-center gap-2"><strong class="text-forest">Prinsip:</strong> Zero-pressure &amp; Privacy First</span>
+          </div>
+          <div class="text-right">
+            <p class="font-display text-base font-bold text-forest">Tim Wali Tahfiz</p>
+            <p class="text-xs text-slate/60">Aplikasi PWA Lintas Perangkat</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Slide 2: The Problem -->
+      <section data-od-id="slide-problem" class="slide w-full h-full p-12 lg:p-16 flex-col justify-between bg-cream ambient-bg relative overflow-hidden">
+        <div class="relative z-10 flex items-center justify-between">
+          <span class="text-xs font-bold uppercase tracking-caps px-4 py-1.5 rounded-full bg-terracotta/15 text-terracotta border border-terracotta/20">
+            01. Tantangan Keluarga
+          </span>
+          <span class="text-sm font-semibold text-slate/60">Latar Belakang</span>
+        </div>
+
+        <div class="relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-10 items-center my-auto">
+          <div class="lg:col-span-5 space-y-5">
+            <h2 class="font-display text-4xl lg:text-5xl font-bold text-forest leading-tight">
+              Menghafal Sering Terasa Sebagai <span class="text-terracotta">Bebanan</span>, Bukan Kedekatan
+            </h2>
+            <p class="text-lg text-slate/80 leading-relaxed">
+              Di tengah kesibukan sehari-hari, niat mulia membimbing anak menghafal Al-Qur'an sering terbentur berbagai kendala praktis dan emosional.
+            </p>
+          </div>
+
+          <div class="lg:col-span-7 grid grid-cols-1 sm:grid-cols-2 gap-5">
+            <div class="bg-white/80 backdrop-blur-sm p-6 rounded-3xl border border-forest/10 shadow-soft space-y-3">
+              <div class="w-12 h-12 rounded-2xl bg-peach flex items-center justify-center text-terracotta font-bold text-xl">1</div>
+              <h3 class="font-display text-xl font-bold text-forest">Bingung Mulai Dari Mana</h3>
+              <p class="text-sm text-slate/75 leading-relaxed">Orang tua bingung menentukan porsi harian yang pas dan tidak tahu urutan latihan yang efektif.</p>
+            </div>
+
+            <div class="bg-white/80 backdrop-blur-sm p-6 rounded-3xl border border-forest/10 shadow-soft space-y-3">
+              <div class="w-12 h-12 rounded-2xl bg-sage flex items-center justify-center text-forest font-bold text-xl">2</div>
+              <h3 class="font-display text-xl font-bold text-forest">Murojaah Mudah Terlewat</h3>
+              <p class="text-sm text-slate/75 leading-relaxed">Tanpa jadwal pengulangan yang rapi, hafalan lama cepat lupa dan harus diulang dari nol.</p>
+            </div>
+
+            <div class="bg-white/80 backdrop-blur-sm p-6 rounded-3xl border border-forest/10 shadow-soft space-y-3">
+              <div class="w-12 h-12 rounded-2xl bg-terracotta/20 flex items-center justify-center text-terracotta font-bold text-xl">3</div>
+              <h3 class="font-display text-xl font-bold text-forest">Tekanan &amp; Rasa Bersalah</h3>
+              <p class="text-sm text-slate/75 leading-relaxed">Aplikasi umum sering memakai streak / leaderboard yang membuat anak lelah dan merasa gagal.</p>
+            </div>
+
+            <div class="bg-white/80 backdrop-blur-sm p-6 rounded-3xl border border-forest/10 shadow-soft space-y-3">
+              <div class="w-12 h-12 rounded-2xl bg-forest/15 flex items-center justify-center text-forest font-bold text-xl">4</div>
+              <h3 class="font-display text-xl font-bold text-forest">Peran Orang Tua Tergeser</h3>
+              <p class="text-sm text-slate/75 leading-relaxed">Gadget sering menggantikan interaksi manusia, padahal bimbingan orang tua tak tertandingi.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="relative z-10 border-t border-forest/15 pt-4 text-sm text-slate/60 font-medium">
+          Solusi yang dibutuhkan: <span class="text-forest font-bold">Panduan terstruktur yang mendukung wali, bukan menggantikannya.</span>
+        </div>
+      </section>
+
+      <!-- Slide 3: Solution & Core Methodology -->
+      <section data-od-id="slide-solution" class="slide w-full h-full p-12 lg:p-16 flex-col justify-between bg-cream ambient-bg relative overflow-hidden">
+        <div class="relative z-10 flex items-center justify-between">
+          <span class="text-xs font-bold uppercase tracking-caps px-4 py-1.5 rounded-full bg-forest text-cream">
+            02. Solusi &amp; Metode Latihan
+          </span>
+          <span class="text-sm font-semibold text-slate/60">Talaqqi · Tikrar · Rabt</span>
+        </div>
+
+        <div class="relative z-10 my-auto space-y-8">
+          <div class="text-center max-w-3xl mx-auto space-y-3">
+            <h2 class="font-display text-4xl lg:text-5xl font-bold text-forest">
+              Satu Ritme Ringan untuk Setiap Ayat
+            </h2>
+            <p class="text-lg text-slate/80">
+              Wali Tahfiz membagi sesi hafalan menjadi 3 langkah jernih yang disesuaikan dengan kapasitas tiap anak.
+            </p>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <!-- Step 1 -->
+            <div class="bg-white p-8 rounded-[30px] border border-forest/15 shadow-soft relative overflow-hidden">
+              <div class="absolute top-0 right-0 w-24 h-24 bg-peach/40 rounded-bl-full pointer-events-none"></div>
+              <span class="inline-block px-3 py-1 rounded-full bg-peach text-terracotta text-xs font-bold uppercase mb-4">Langkah 1</span>
+              <h3 class="font-display text-2xl font-bold text-forest mb-2">Talaqqi (Listen)</h3>
+              <p class="text-sm text-slate/75 leading-relaxed mb-4">Dengarkan bacaan qari standar pilihan bersama anak sesuai jumlah pengulangan yang dipilih.</p>
+              <div class="text-xs font-bold text-forest bg-sage/50 p-3 rounded-2xl border border-forest/10">🔊 Audio Per-Ayat &amp; Putar Ulang</div>
+            </div>
+
+            <!-- Step 2 -->
+            <div class="bg-white p-8 rounded-[30px] border border-forest/15 shadow-soft relative overflow-hidden">
+              <div class="absolute top-0 right-0 w-24 h-24 bg-sage/60 rounded-bl-full pointer-events-none"></div>
+              <span class="inline-block px-3 py-1 rounded-full bg-sage text-forest text-xs font-bold uppercase mb-4">Langkah 2</span>
+              <h3 class="font-display text-2xl font-bold text-forest mb-2">Tikrar (Repeat)</h3>
+              <p class="text-sm text-slate/75 leading-relaxed mb-4">Wali membaca perlahan, anak menirukan. Tuntaskan jumlah ikhtiar tanpa paksaan waktu.</p>
+              <div class="text-xs font-bold text-forest bg-sage/50 p-3 rounded-2xl border border-forest/10">Hitungan Sederhana Pengulangan</div>
+            </div>
+
+            <!-- Step 3 -->
+            <div class="bg-white p-8 rounded-[30px] border border-forest/15 shadow-soft relative overflow-hidden">
+              <div class="absolute top-0 right-0 w-24 h-24 bg-terracotta/15 rounded-bl-full pointer-events-none"></div>
+              <span class="inline-block px-3 py-1 rounded-full bg-terracotta/20 text-terracotta text-xs font-bold uppercase mb-4">Langkah 3</span>
+              <h3 class="font-display text-2xl font-bold text-forest mb-2">Rabt (Connect)</h3>
+              <p class="text-sm text-slate/75 leading-relaxed mb-4">Gabungkan ayat baru dengan ayat sebelumnya dalam blok pendek hingga full surah.</p>
+              <div class="text-xs font-bold text-forest bg-sage/50 p-3 rounded-2xl border border-forest/10">🔗 Sambung Ayat Baru dalam Blok Pendek</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="relative z-10 bg-white/90 p-4 rounded-2xl border border-forest/15 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-3 text-xs" style="position: relative; left: 0px; top: -29px;">
+          <div class="flex items-center gap-2">
+            <span class="px-2.5 py-1 rounded-full bg-forest text-cream font-bold uppercase text-[10px]">Murojaah Spaced Review</span>
+            <span class="text-slate/80 font-medium font-mono">Khusus Hafalan Tersimpan: <strong>1d → 3d → 7d → 14d → 30d</strong></span>
+          </div>
+          <div class="flex items-center gap-4 text-slate/70">
+            <span>Hasil Murojaah: <strong class="text-forest">Lancar</strong> / <strong class="text-terracotta">Belajar Lagi</strong></span>
+            <span>Status: <strong class="text-forest">Siap Diulang</strong> (Tanpa kata "Terlambat")</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- Slide 4: Key Features & UX Experience -->
+      <section data-od-id="slide-features" class="slide w-full h-full p-12 lg:p-16 flex-col justify-between bg-cream ambient-bg relative overflow-hidden">
+        <div class="relative z-10 flex items-center justify-between">
+          <span class="text-xs font-bold uppercase tracking-caps px-4 py-1.5 rounded-full bg-sage text-forest border border-forest/15">
+            03. Fitur Unggulan
+          </span>
+          <span class="text-sm font-semibold text-slate/60">Pengalaman Pengguna</span>
+        </div>
+
+        <div class="relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-8 my-auto items-center">
+          <div class="lg:col-span-4 space-y-4">
+            <h2 class="font-display text-4xl font-bold text-forest">
+              Fitur Utama Wali Tahfiz
+            </h2>
+            <p class="text-base text-slate/80 leading-relaxed">
+              Dirancang hangat untuk HP maupun Tablet, menjaga privasi data keluarga tanpa perlu akun eksternal.
+            </p>
+            <div class="p-4 rounded-2xl bg-white border border-forest/15 shadow-sm text-xs font-semibold text-forest space-y-1">
+              <p class="font-bold text-terracotta">📱 Mobile-First &amp; Offline First</p>
+              <p class="text-slate/70">App shell tersimpan di HP. Dapat dibuka tanpa koneksi internet.</p>
+            </div>
+          </div>
+
+          <div class="lg:col-span-8 grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <!-- Feature 1 -->
+            <div class="bg-white p-5 rounded-2xl border border-forest/10 shadow-sm flex items-start gap-4">
+              <div class="p-3 rounded-xl bg-forest text-cream font-bold text-xl shrink-0">🎧</div>
+              <div>
+                <h4 class="font-display font-bold text-forest text-lg">Pemain Audio Qur'an</h4>
+                <p class="text-xs text-slate/70 mt-1 leading-relaxed">Al-Fatihah &amp; Juz 30, teks Arab Uthmani, terjemahan ID/EN, repeat per-ayat/jangka.</p>
+              </div>
+            </div>
+
+            <!-- Feature 2 -->
+            <div class="bg-white p-5 rounded-2xl border border-forest/10 shadow-sm flex items-start gap-4">
+              <div class="p-3 rounded-xl bg-peach text-terracotta font-bold text-xl shrink-0">👨‍👩‍👧‍👦</div>
+              <div>
+                <h4 class="font-display font-bold text-forest text-lg">Profil Multi-Anak</h4>
+                <p class="text-xs text-slate/70 mt-1 leading-relaxed">Setiap anak punya target terpisah, jadwal murojaah, serta setelan pengulangan tersendiri.</p>
+              </div>
+            </div>
+
+            <!-- Feature 3 -->
+            <div class="bg-white p-5 rounded-2xl border border-forest/10 shadow-sm flex items-start gap-4">
+              <div class="p-3 rounded-xl bg-sage text-forest font-bold text-xl shrink-0">🌿</div>
+              <div>
+                <h4 class="font-display font-bold text-forest text-lg">Teman Hafalan (Companion)</h4>
+                <p class="text-xs text-slate/70 mt-1 leading-relaxed">Cek suasana hati anak, opsi catat hafalan/murojaah langsung hari ini (tanpa program), serta rekomendasi lokal &amp; AI.</p>
+              </div>
+            </div>
+
+            <!-- Feature 4 -->
+            <div class="bg-white p-5 rounded-2xl border border-forest/10 shadow-sm flex items-start gap-4">
+              <div class="p-3 rounded-xl bg-terracotta/15 text-terracotta font-bold text-xl shrink-0">🔒</div>
+              <div>
+                <h4 class="font-display font-bold text-forest text-lg">Privasi &amp; Ekspor Data</h4>
+                <p class="text-xs text-slate/70 mt-1 leading-relaxed">Data tersimpan lokal di IndexedDB. Fitur ekspor/impor JSON untuk pindah HP aman.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="relative z-10 border-t border-forest/15 pt-4 text-xs text-slate/60 flex items-center justify-between">
+          <span>Dukungan Bahasa: <strong>Bahasa Indonesia &amp; English</strong></span>
+          <span>Dukungan Tema: <strong>Light &amp; Dark Mode (Dynamic Status Bar)</strong></span>
+        </div>
+      </section>
+
+      <!-- Slide 5: Product Vision & Closing -->
+      <section data-od-id="slide-closing" class="slide w-full h-full p-12 lg:p-16 flex-col justify-between bg-forest text-cream relative overflow-hidden">
+        <div class="absolute -right-16 -bottom-16 w-96 h-96 rounded-full bg-white/5 blur-3xl pointer-events-none"></div>
+
+        <div class="relative z-10 flex items-center justify-between">
+          <span class="text-xs font-bold uppercase tracking-caps px-4 py-1.5 rounded-full bg-white/15 text-peach border border-white/20">
+            04. Visi Masa Depan
+          </span>
+          <span class="font-arabic text-2xl text-peach">فَإِنَّ مَعَ ٱلْعُسْرِ يُسْرًا</span>
+        </div>
+
+        <div class="relative z-10 max-w-4xl space-y-6 my-auto text-center mx-auto">
+          <h2 class="font-display text-4xl lg:text-6xl font-bold leading-tight">
+            Membangun Kebiasaan Hafalan yang <span class="text-peach">Terasa Mungkin</span>
+          </h2>
+          <p class="text-xl text-cream/90 leading-relaxed max-w-3xl mx-auto font-medium">
+            Kami tidak menjanjikan hafalan instan. Kami membantu keluarga menghidupkan Al-Qur'an di rumah: <em class="text-peach not-italic font-semibold">mulai dari satu ayat hari ini, lalu ulangi dengan hati yang gembira.</em>
+          </p>
+          <div class="pt-4">
+            <span class="inline-flex items-center gap-3 px-6 py-3 rounded-2xl bg-terracotta text-white font-display text-lg font-bold shadow-glow">
+              Mari Dampingi Buah Hati Bersama Wali Tahfiz
+            </span>
+          </div>
+        </div>
+
+        <div class="relative z-10 flex items-center justify-between border-t border-white/15 pt-6 text-sm text-cream/70">
+          <div>
+            <p class="font-bold text-cream">Wali Tahfiz PWA</p>
+            <p class="text-xs text-cream/60">Siap diinstal via browser iOS &amp; Android</p>
+          </div>
+          <div class="text-right">
+            <p class="font-bold text-peach">Terima Kasih</p>
+            <p class="text-xs text-cream/60">Syukron &amp; Jazaakumullahu Khairan</p>
+          </div>
+        </div>
+      </section>
+
+    </div>
+  </main>
+
+  <!-- Deck Navigation Footer Bar -->
+  <footer class="fixed bottom-0 left-0 right-0 px-8 py-4 bg-slate-900/90 backdrop-blur-md border-t border-white/10 flex items-center justify-between z-40">
+    <div class="flex items-center gap-4">
+      <button id="prev-btn" aria-label="Slide Sebelumnya" class="h-10 px-4 rounded-xl bg-white/10 hover:bg-white/20 text-cream text-xs font-bold flex items-center gap-2 border border-white/10 transition active:scale-95 disabled:opacity-40 disabled:pointer-events-none">
+        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"></path>
+        </svg>
+        <span>Sebelumnya</span>
+      </button>
+
+      <button id="next-btn" aria-label="Slide Selanjutnya" class="h-10 px-5 rounded-xl bg-forest hover:bg-forest-light text-cream text-xs font-bold flex items-center gap-2 shadow-sm transition active:scale-95 disabled:opacity-40 disabled:pointer-events-none">
+        <span>Selanjutnya</span>
+        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"></path>
+        </svg>
+      </button>
+    </div>
+
+    <!-- Slide Thumbnails / Indicators -->
+    <div id="slide-indicators" class="flex items-center gap-2.5">
+      <!-- Generated by JS -->
+    </div>
+
+    <div class="text-xs font-bold text-cream/70 font-mono">
+      Slide <span id="current-slide-num" class="text-peach">1</span> / <span id="total-slides-num">5</span>
+    </div>
+  </footer>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const slides = Array.from(document.querySelectorAll('.slide'));
+      const deckContainer = document.getElementById('deck-container');
+      const prevBtn = document.getElementById('prev-btn');
+      const nextBtn = document.getElementById('next-btn');
+      const progressBar = document.getElementById('progress-bar');
+      const currentSlideNum = document.getElementById('current-slide-num');
+      const totalSlidesNum = document.getElementById('total-slides-num');
+      const slideIndicators = document.getElementById('slide-indicators');
+      const themeToggle = document.getElementById('theme-toggle');
+      const themeText = document.getElementById('theme-text');
+      const fullscreenToggle = document.getElementById('fullscreen-toggle');
+
+      const STORAGE_KEY = 'wali-tahfiz:deck-slide';
+      const THEME_KEY = 'wali-tahfiz:deck-theme';
+
+      let currentIndex = 0;
+      const total = slides.length;
+      totalSlidesNum.textContent = total;
+
+      // Restore stored slide index
+      const savedIndex = parseInt(localStorage.getItem(STORAGE_KEY), 10);
+      if (!isNaN(savedIndex) && savedIndex >= 0 && savedIndex < total) {
+        currentIndex = savedIndex;
+      }
+
+      // Generate indicators
+      slides.forEach((_, idx) => {
+        const dot = document.createElement('button');
+        dot.setAttribute('aria-label', `Ke Slide ${idx + 1}`);
+        dot.className = `h-3 rounded-full transition-all duration-300 ${idx === currentIndex ? 'w-8 bg-terracotta' : 'w-3 bg-white/20 hover:bg-white/40'}`;
+        dot.addEventListener('click', () => goToSlide(idx));
+        slideIndicators.appendChild(dot);
+      });
+
+      function updateDeck() {
+        slides.forEach((slide, idx) => {
+          if (idx === currentIndex) {
+            slide.classList.add('active');
+          } else {
+            slide.classList.remove('active');
+          }
+        });
+
+        // Update indicators
+        const dots = Array.from(slideIndicators.children);
+        dots.forEach((dot, idx) => {
+          if (idx === currentIndex) {
+            dot.className = 'h-3 w-8 rounded-full bg-terracotta transition-all duration-300';
+          } else {
+            dot.className = 'h-3 w-3 rounded-full bg-white/20 hover:bg-white/40 transition-all duration-300';
+          }
+        });
+
+        // Update progress & labels
+        const pct = ((currentIndex + 1) / total) * 100;
+        progressBar.style.width = `${pct}%`;
+        currentSlideNum.textContent = currentIndex + 1;
+
+        prevBtn.disabled = currentIndex === 0;
+        nextBtn.disabled = currentIndex === total - 1;
+
+        localStorage.setItem(STORAGE_KEY, currentIndex);
+      }
+
+      function goToSlide(idx) {
+        if (idx >= 0 && idx < total) {
+          currentIndex = idx;
+          updateDeck();
+        }
+      }
+
+      function nextSlide() {
+        if (currentIndex < total - 1) {
+          currentIndex++;
+          updateDeck();
+        }
+      }
+
+      function prevSlide() {
+        if (currentIndex > 0) {
+          currentIndex--;
+          updateDeck();
+        }
+      }
+
+      prevBtn.addEventListener('click', prevSlide);
+      nextBtn.addEventListener('click', nextSlide);
+
+      // Keyboard Controls
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'ArrowRight' || e.key === 'Space' || e.key === 'PageDown') {
+          e.preventDefault();
+          nextSlide();
+        } else if (e.key === 'ArrowLeft' || e.key === 'PageUp') {
+          e.preventDefault();
+          prevSlide();
+        } else if (e.key === 'Home') {
+          e.preventDefault();
+          goToSlide(0);
+        } else if (e.key === 'End') {
+          e.preventDefault();
+          goToSlide(total - 1);
+        }
+      });
+
+      // Dark Mode Toggle
+      let isDark = localStorage.getItem(THEME_KEY) === 'dark';
+      function applyTheme() {
+        if (isDark) {
+          deckContainer.classList.add('dark');
+          deckContainer.classList.remove('bg-cream');
+          deckContainer.classList.add('bg-[#16211E]', 'text-cream');
+          themeText.textContent = 'Dark Mode';
+        } else {
+          deckContainer.classList.remove('dark');
+          deckContainer.classList.add('bg-cream');
+          deckContainer.classList.remove('bg-[#16211E]', 'text-cream');
+          themeText.textContent = 'Light Mode';
+        }
+        localStorage.setItem(THEME_KEY, isDark ? 'dark' : 'light');
+      }
+
+      themeToggle.addEventListener('click', () => {
+        isDark = !isDark;
+        applyTheme();
+      });
+      applyTheme();
+
+      // Fullscreen Toggle
+      fullscreenToggle.addEventListener('click', () => {
+        if (!document.fullscreenElement) {
+          deckContainer.requestFullscreen().catch(err => {
+            console.error('Fullscreen failed:', err);
+          });
+        } else {
+          document.exitFullscreen();
+        }
+      });
+
+      updateDeck();
+    });
+  </script>
+
+
+</body></html>

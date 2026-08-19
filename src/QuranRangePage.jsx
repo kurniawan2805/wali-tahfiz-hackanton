@@ -1,44 +1,13 @@
 import { useEffect, useRef, useState } from 'react'
-import { ArrowLeft, Headphones, Pause, Play, RotateCcw, Search, SkipBack, SkipForward, SlidersHorizontal, Volume2 } from 'lucide-react'
+import { ArrowLeft, Check, Download, Headphones, Pause, Play, RotateCcw, Search, SkipBack, SkipForward, SlidersHorizontal, Volume2 } from 'lucide-react'
 import { getQuranRange, getQuranRepeat, saveQuranRange, saveQuranRepeat } from './db'
 import { audioUrlForAyah, DEFAULT_QARI_ID, qariFor } from './quranAudio'
+import { downloadSurahAudio, fetchSurahArabic, fetchSurahEdition, isSurahAudioCached } from './quranText'
+import { AUDIO_SURAHS, BISMILLAH_TEXT, stripBismillah, surahFor } from './surahData'
 import QariPicker from './QariPicker'
 import { useLocale } from './i18n'
 
-const surahs = [{ id: '112', name: 'Al-Ikhlas', arabic: 'قُلْ هُوَ ٱللَّهُ أَحَدٌ', ayat: 4 }, { id: '113', name: 'Al-Falaq', arabic: 'قُلْ أَعُوذُ بِرَبِّ ٱلْفَلَقِ', ayat: 5 }, { id: '114', name: 'An-Nas', arabic: 'قُلْ أَعُوذُ بِرَبِّ ٱلنَّاسِ', ayat: 6 }]
-const audioSurahs = [
-  { id: '1', name: 'Al-Fatihah', arabic: 'ٱلْفَاتِحَة', ayat: 7, group: 'fatihah' },
-  { id: '78', name: 'An-Naba', arabic: 'ٱلنَّبَأ', ayat: 40, group: 'juz30' }, { id: '79', name: 'An-Naziat', arabic: 'ٱلنَّازِعَات', ayat: 46, group: 'juz30' },
-  { id: '80', name: 'Abasa', arabic: 'عَبَسَ', ayat: 42, group: 'juz30' }, { id: '81', name: 'At-Takwir', arabic: 'ٱلتَّكْوِير', ayat: 29, group: 'juz30' },
-  { id: '82', name: 'Al-Infitar', arabic: 'ٱلْإِنفِطَار', ayat: 19, group: 'juz30' }, { id: '83', name: 'Al-Mutaffifin', arabic: 'ٱلْمُطَفِّفِين', ayat: 36, group: 'juz30' },
-  { id: '84', name: 'Al-Inshiqaq', arabic: 'ٱلْإِنشِقَاق', ayat: 25, group: 'juz30' }, { id: '85', name: 'Al-Buruj', arabic: 'ٱلْبُرُوج', ayat: 22, group: 'juz30' },
-  { id: '86', name: 'At-Tariq', arabic: 'ٱلطَّارِق', ayat: 17, group: 'juz30' }, { id: '87', name: 'Al-Ala', arabic: 'ٱلْأَعْلَىٰ', ayat: 19, group: 'juz30' },
-  { id: '88', name: 'Al-Ghashiyah', arabic: 'ٱلْغَاشِيَة', ayat: 26, group: 'juz30' }, { id: '89', name: 'Al-Fajr', arabic: 'ٱلْفَجْر', ayat: 30, group: 'juz30' },
-  { id: '90', name: 'Al-Balad', arabic: 'ٱلْبَلَد', ayat: 20, group: 'juz30' }, { id: '91', name: 'Ash-Shams', arabic: 'ٱلشَّمْس', ayat: 15, group: 'juz30' },
-  { id: '92', name: 'Al-Layl', arabic: 'ٱللَّيْل', ayat: 21, group: 'juz30' }, { id: '93', name: 'Ad-Duha', arabic: 'ٱلضُّحَىٰ', ayat: 11, group: 'juz30' },
-  { id: '94', name: 'Ash-Sharh', arabic: 'ٱلشَّرْح', ayat: 8, group: 'juz30' }, { id: '95', name: 'At-Tin', arabic: 'ٱلتِّين', ayat: 8, group: 'juz30' },
-  { id: '96', name: 'Al-Alaq', arabic: 'ٱلْعَلَق', ayat: 19, group: 'juz30' }, { id: '97', name: 'Al-Qadr', arabic: 'ٱلْقَدْر', ayat: 5, group: 'juz30' },
-  { id: '98', name: 'Al-Bayyinah', arabic: 'ٱلْبَيِّنَة', ayat: 8, group: 'juz30' }, { id: '99', name: 'Az-Zalzalah', arabic: 'ٱلزَّلْزَلَة', ayat: 8, group: 'juz30' },
-  { id: '100', name: 'Al-Adiyat', arabic: 'ٱلْعَادِيَات', ayat: 11, group: 'juz30' }, { id: '101', name: 'Al-Qariah', arabic: 'ٱلْقَارِعَة', ayat: 11, group: 'juz30' },
-  { id: '102', name: 'At-Takathur', arabic: 'ٱلتَّكَاثُر', ayat: 8, group: 'juz30' }, { id: '103', name: 'Al-Asr', arabic: 'ٱلْعَصْر', ayat: 3, group: 'juz30' },
-  { id: '104', name: 'Al-Humazah', arabic: 'ٱلْهُمَزَة', ayat: 9, group: 'juz30' }, { id: '105', name: 'Al-Fil', arabic: 'ٱلْفِيل', ayat: 5, group: 'juz30' },
-  { id: '106', name: 'Quraysh', arabic: 'قُرَيْش', ayat: 4, group: 'juz30' }, { id: '107', name: 'Al-Maun', arabic: 'ٱلْمَاعُون', ayat: 7, group: 'juz30' },
-  { id: '108', name: 'Al-Kawthar', arabic: 'ٱلْكَوْثَر', ayat: 3, group: 'juz30' }, { id: '109', name: 'Al-Kafirun', arabic: 'ٱلْكَافِرُون', ayat: 6, group: 'juz30' },
-  { id: '110', name: 'An-Nasr', arabic: 'ٱلنَّصْر', ayat: 3, group: 'juz30' }, { id: '111', name: 'Al-Masad', arabic: 'ٱلْمَسَد', ayat: 5, group: 'juz30' },
-  { id: '112', name: 'Al-Ikhlas', arabic: 'ٱلْإِخْلَاص', ayat: 4, group: 'juz30' }, { id: '113', name: 'Al-Falaq', arabic: 'ٱلْفَلَق', ayat: 5, group: 'juz30' },
-  { id: '114', name: 'An-Nas', arabic: 'ٱلنَّاس', ayat: 6, group: 'juz30' },
-]
-const bismillahText = 'بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ'
-const surahFor = (id) => audioSurahs.find((surah) => surah.id === id) || surahs.find((surah) => surah.id === id)
-
-const stripBismillah = (text, surahId, ayahNumber) => {
-  if (String(surahId) === '1' || ayahNumber !== 1) return text || ''
-  const source = (text || '').trim()
-  const bismillah = /^ب[\u064B-\u065F\u0670\u0640]*س[\u064B-\u065F\u0670\u0640]*م[\u064B-\u065F\u0670\u0640]*\s+[ٱا][\u064B-\u065F\u0670\u0640]*ل[\u064B-\u065F\u0670\u0640]*ل[\u064B-\u065F\u0670\u0640]*ه[\u064B-\u065F\u0670\u0640]*\s+[ٱا][\u064B-\u065F\u0670\u0640]*ل[\u064B-\u065F\u0670\u0640]*ر[\u064B-\u065F\u0670\u0640]*ح[\u064B-\u065F\u0670\u0640]*م[\u064B-\u065F\u0670\u0640]*[\u0670أا]?[\u064B-\u065F\u0670\u0640]*ن[\u064B-\u065F\u0670\u0640]*\s+[ٱا][\u064B-\u065F\u0670\u0640]*ل[\u064B-\u065F\u0670\u0640]*ر[\u064B-\u065F\u0670\u0640]*ح[\u064B-\u065F\u0670\u0640]*[يیى][\u064B-\u065F\u0670\u0640]*م[\u064B-\u065F\u0670\u0640]*/
-  return source.replace(bismillah, '').trim() || source
-}
-
-function Field({ label, hint, children }) { return <div className="block"><span className="mb-2 block text-sm font-bold text-slate-600">{label}</span>{children}{hint && <span className="mt-1.5 block text-xs text-slate-500">{hint}</span>}</div> }
+function Field({ label, hint, children }) { return <div className="block"><span className="mb-2 block text-sm font-bold text-stone-600 dark:text-stone-300">{label}</span>{children}{hint && <span className="mt-1.5 block text-xs text-stone-500 dark:text-stone-400">{hint}</span>}</div> }
 
 
 export default function QuranRangePage({ back, qariId = DEFAULT_QARI_ID, onQariChange }) {
@@ -57,6 +26,11 @@ export default function QuranRangePage({ back, qariId = DEFAULT_QARI_ID, onQariC
   const [isPlaying, setIsPlaying] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState('')
+  const [isDownloading, setIsDownloading] = useState(false)
+  const [isDownloaded, setIsDownloaded] = useState(false)
+  const [downloadProgress, setDownloadProgress] = useState(0)
+  const [downloadTotal, setDownloadTotal] = useState(0)
+  const [downloadError, setDownloadError] = useState('')
   const [ayahRepeatCount, setAyahRepeatCount] = useState(1)
   const [ayahRepeatProgress, setAyahRepeatProgress] = useState(0)
   const [rangeEnabled, setRangeEnabled] = useState(false)
@@ -69,7 +43,7 @@ export default function QuranRangePage({ back, qariId = DEFAULT_QARI_ID, onQariC
   const qari = qariFor(selectedQariId)
   const translationEdition = locale === 'en' ? 'en.sahih' : 'id.indonesian'
   const normalizedQuery = query.toLocaleLowerCase('id-ID').replace(/[^a-z0-9\u0600-\u06ff]/g, '')
-  const filteredSurahs = audioSurahs.filter((surah) => {
+  const filteredSurahs = AUDIO_SURAHS.filter((surah) => {
     const searchable = `${surah.id} ${surah.name} ${surah.arabic}`.toLocaleLowerCase('id-ID').replace(/[^a-z0-9\u0600-\u06ff]/g, '')
     return searchable.includes(normalizedQuery)
   })
@@ -78,6 +52,14 @@ export default function QuranRangePage({ back, qariId = DEFAULT_QARI_ID, onQariC
   const audioUrl = selected && (isBismillah || activeAyah) ? audioUrlForAyah(selectedQariId, isBismillah ? 1 : activeVerse?.globalNumber) : undefined
 
   useEffect(() => { setSelectedQariId(qariFor(qariId).id) }, [qariId])
+
+  useEffect(() => {
+    let mounted = true
+    isSurahAudioCached(selectedId, selectedQariId).then(({ cached, total }) => {
+      if (mounted && total > 0) setIsDownloaded(cached === total)
+    }).catch(() => {})
+    return () => { mounted = false }
+  }, [selectedId, selectedQariId])
 
   useEffect(() => {
     let mounted = true
@@ -108,8 +90,8 @@ export default function QuranRangePage({ back, qariId = DEFAULT_QARI_ID, onQariC
     setRangeRepeatProgress(0)
     audioRef.current?.pause()
     Promise.all([
-      fetch(`https://api.alquran.cloud/v1/surah/${selectedId}/quran-uthmani`, { signal: controller.signal }).then((response) => { if (!response.ok) throw new Error('Teks Arab tidak dapat dimuat.'); return response.json() }),
-      fetch(`https://api.alquran.cloud/v1/surah/${selectedId}/${translationEdition}`, { signal: controller.signal }).then((response) => { if (!response.ok) throw new Error('Terjemahan tidak dapat dimuat.'); return response.json() }),
+      fetchSurahArabic(selectedId, controller.signal).then((response) => { if (!response.ok) throw new Error('Teks Arab tidak dapat dimuat.'); return response.json() }),
+      fetchSurahEdition(selectedId, translationEdition, controller.signal).then((response) => { if (!response.ok) throw new Error('Terjemahan tidak dapat dimuat.'); return response.json() }),
     ]).then(([arabicResponse, translationResponse]) => {
       if (controller.signal.aborted) return
       const arabicAyahs = arabicResponse?.data?.ayahs || []
@@ -199,8 +181,8 @@ export default function QuranRangePage({ back, qariId = DEFAULT_QARI_ID, onQariC
       } else { resetProgress(); setIsPlaying(false) }
       return
     }
-    const currentIndex = audioSurahs.findIndex((surah) => surah.id === selected.id)
-    const nextSurah = selected.group === 'juz30' ? audioSurahs.slice(currentIndex + 1).find((surah) => surah.group === 'juz30') : null
+    const currentIndex = AUDIO_SURAHS.findIndex((surah) => surah.id === selected.id)
+    const nextSurah = selected.group === 'juz30' ? AUDIO_SURAHS.slice(currentIndex + 1).find((surah) => surah.group === 'juz30') : null
     if (nextSurah) { setPendingStart('bismillah'); setSelectedId(nextSurah.id) } else setIsPlaying(false)
   }
   const togglePlayback = () => {
@@ -223,17 +205,73 @@ export default function QuranRangePage({ back, qariId = DEFAULT_QARI_ID, onQariC
     setSelectedQariId(normalized)
     onQariChange?.(normalized)
   }
+  const startOfflineDownload = async () => {
+    if (isDownloading || !selected) return
+    setIsDownloading(true)
+    setDownloadError('')
+    setDownloadProgress(0)
+    try {
+      const result = await downloadSurahAudio(selectedId, selectedQariId, (done, total) => { setDownloadProgress(done); setDownloadTotal(total) })
+      if (result.failed > 0 || result.cached !== result.total) throw new Error('partial')
+      setIsDownloaded(result.total > 0)
+    } catch {
+      setDownloadError(t('audio.downloadError'))
+    } finally {
+      setIsDownloading(false)
+    }
+  }
 
-  return <main className="page-root pb-12">
-    <audio ref={audioRef} src={audioUrl} onPlay={() => setIsPlaying(true)} onPause={() => setIsPlaying(false)} onEnded={handleEnded} onError={() => setError('Audio ayat ini belum dapat diputar. Coba lagi beberapa saat.')}/>
+  return <main className="page-root pb-28">
+    <audio ref={audioRef} src={audioUrl} onPlay={() => setIsPlaying(true)} onPause={() => setIsPlaying(false)} onEnded={handleEnded} onError={() => setError(t('practice.audioError'))}/>
     <div className="mx-auto max-w-3xl px-4 pt-6 sm:px-6">
-      <header className="mb-5 flex items-center gap-3"><button type="button" onClick={back} aria-label={t('common.back')} className="icon-button"><ArrowLeft size={20}/></button><div className="min-w-0 flex-1"><p className="text-xs font-bold uppercase tracking-[.14em] text-forest/70">Wali Tahfiz</p><h1 className="font-display text-3xl">{t('audio.title')}</h1></div><button type="button" onClick={() => setCatalogOpen((open) => !open)} className="page-action-button"><Search size={17}/>{catalogOpen ? t('common.close') : t('audio.search')}</button></header>
-      <section className="glass-card overflow-hidden"><div className="bg-forest px-5 py-5 text-white sm:px-6"><p className="step-label bg-white/15 text-white"><Headphones size={14}/> {t('audio.eyebrow')}</p><div className="mt-3 flex flex-wrap items-end justify-between gap-3"><div><h2 className="font-display text-2xl">{selected?.name || 'Juz 30'}</h2><p className="mt-1 text-sm text-white/75">{t('audio.body')}</p></div><span className="rounded-full bg-white/15 px-3 py-1.5 text-xs font-bold">{t('quran.perVerse')}</span></div></div>
-      {catalogOpen && <div className="border-b border-sage/70 bg-[#fbfdf8] p-5"><label className="relative block"><Search className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-forest" size={19}/><input autoFocus value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Cari nama, Arab, atau nomor surat" className="input-field pl-11" aria-label="Cari surat"/></label><p className="mt-3 text-sm text-slate-500">{query ? `${filteredSurahs.length} surat ditemukan` : 'Ketik nama, nomor, atau tulisan Arab surat.'}</p><div className="mt-3 grid gap-2 sm:grid-cols-2">{filteredSurahs.map((surah) => <button type="button" key={surah.id} onClick={() => selectSurah(surah)} className={`flex min-h-12 items-center gap-3 rounded-2xl p-3 text-left transition-transform active:scale-[0.96] ${selectedId === surah.id ? 'bg-[#eff6eb]' : 'bg-white shadow-sm'}`}><span className="font-bold tabular-nums text-terracotta">{surah.id}</span><span className="min-w-0 flex-1"><b className="block text-forest">{surah.name}</b><small className="text-slate-500">{surah.ayat} ayat</small></span><span className="font-serif text-lg text-terracotta" dir="rtl">{surah.arabic}</span></button>)}{query && filteredSurahs.length === 0 && <p className="rounded-2xl bg-[#f7faf4] p-4 text-sm font-semibold text-slate-500 sm:col-span-2">Surat tidak ditemukan. Coba nama atau nomor lain.</p>}</div></div>}
-      <div className="p-4 sm:p-5"><button type="button" onClick={() => setSettingsOpen((open) => !open)} aria-expanded={settingsOpen} className="range-settings-toggle"><span><SlidersHorizontal size={18}/><b>{t('audio.repeat')}</b></span><small>{qari.name}</small></button>{settingsOpen && <div className="range-settings-panel"><div><span className="mb-2 block text-sm font-bold text-forest">{t('audio.qari')}</span><QariPicker value={selectedQariId} onChange={selectQari}/></div><div className="mt-4 flex items-center justify-between gap-3 border-t border-sage/70 pt-4"><span><b className="block text-forest">{t('audio.repeat')}</b><small className="text-slate-500">Setiap ayat diulang sebelum lanjut</small></span><div className="flex gap-1.5">{[1, 2, 3, 5].map((count) => <button type="button" key={count} onClick={() => { resetProgress(); setAyahRepeatCount(count); saveQuranRepeat(count) }} aria-pressed={ayahRepeatCount === count} className={`range-choice ${ayahRepeatCount === count ? 'range-choice-active' : ''}`}>{count}×</button>)}</div></div><div className="mt-4 border-t border-sage/70 pt-4"><div className="flex items-center justify-between gap-3"><span><b className="block text-forest">Putar rentang ayat</b><small className="text-slate-500">Fokus pada bagian hafalan tertentu</small></span><button type="button" onClick={() => setRangeEnabled((value) => !value)} aria-pressed={rangeEnabled} className={`range-switch ${rangeEnabled ? 'range-switch-active' : ''}`}>{rangeEnabled ? 'Aktif' : 'Nonaktif'}</button></div>{rangeEnabled && <div className="mt-4 grid gap-3 sm:grid-cols-[1fr_1fr_auto]"><Field label="Dari ayat"><input type="number" min="1" max={selected?.ayat} value={rangeStart} onChange={(event) => setBound('start', event.target.value)} className="range-input"/></Field><Field label="Sampai ayat"><input type="number" min={rangeStart} max={selected?.ayat} value={rangeEnd} onChange={(event) => setBound('end', event.target.value)} className="range-input"/></Field><Field label="Ulang rentang"><div className="flex h-[52px] gap-1">{[1, 2, 3, 5].map((count) => <button type="button" key={count} onClick={() => { resetProgress(); setRangeRepeatCount(count) }} aria-pressed={rangeRepeatCount === count} className={`range-choice flex-1 ${rangeRepeatCount === count ? 'range-choice-active' : ''}`}>{count}×</button>)}</div></Field></div>}</div><button type="button" onClick={startRange} className="primary-button mt-4"><Play size={19} fill="currentColor"/>{t('audio.start')}</button></div>}</div>
-      {error && <div className="mx-4 mb-4 rounded-2xl bg-[#fff2df] p-4 text-sm text-terracotta" role="alert">{error}</div>}
-      {isLoading ? <div className="m-4 flex min-h-72 items-center justify-center rounded-[26px] bg-[#f7faf4] text-center dark:bg-emerald-950/60"><p className="text-sm font-semibold text-slate-500 dark:text-stone-300">Memuat ayat dan terjemahan…</p></div> : <div className="m-4 space-y-3" aria-live="polite">{selectedId !== '1' && <button type="button" onClick={playBismillah} aria-pressed={isBismillah} className={`bismillah-card ${isBismillah ? 'bismillah-card-active' : ''}`}><span className="step-label bg-emerald-100 text-emerald-800 dark:border dark:border-emerald-700/50 dark:bg-emerald-900 dark:text-emerald-200"><Volume2 size={13}/> PEMBUKA</span><p className="mt-3 font-serif text-2xl leading-loose text-forest dark:text-emerald-100" dir="rtl">{bismillahText}</p><small>Dengan nama Allah Yang Maha Pengasih lagi Maha Penyayang</small></button>}{verses.map((ayah) => { const isActive = activeAyah === ayah.number && !isBismillah; return <button type="button" id={`quran-ayah-${selectedId}-${ayah.number}`} key={ayah.number} onClick={() => playFromAyah(ayah.number)} disabled={!inRange(ayah.number)} aria-pressed={isActive} className={`ayah-card w-full text-left ${isActive ? 'ayah-card-active' : 'bg-white dark:bg-stone-900/80 border border-stone-200/80 dark:border-emerald-900/30 rounded-2xl p-5 shadow-sm'} ${rangeEnabled && inRange(ayah.number) ? 'ayah-card-in-range' : ''} disabled:cursor-default disabled:opacity-100`}><div className="flex items-start justify-between gap-4"><span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-sm tabular-nums ${isActive ? 'ayah-number-active' : 'bg-emerald-100 text-emerald-800 font-semibold border border-emerald-200 dark:bg-emerald-950 dark:text-emerald-300 dark:border-emerald-800/50'}`}>{ayah.number}</span><p className={`mb-4 text-right text-stone-900 dark:text-stone-100 font-arabic text-2xl md:text-3xl leading-[2.4] ${isActive ? 'text-emerald-700 dark:text-emerald-200 font-bold' : ''}`} dir="rtl">{ayah.arabic}</p></div><div className="text-stone-700 dark:text-stone-300 text-sm leading-relaxed mt-2">{ayah.translation}</div></button> })}</div>}
-      </section>{activeAyah && <section className="sticky bottom-4 z-20 mt-4 rounded-[26px] bg-forest p-3 text-white shadow-[0_18px_40px_rgba(71,119,92,.28)]"><div className="flex items-center gap-3"><button type="button" onClick={togglePlayback} aria-label={isPlaying ? 'Jeda audio' : 'Putar audio'} className="player-main-button">{isPlaying ? <Pause size={22} fill="currentColor"/> : <Play className="ml-0.5" size={22} fill="currentColor"/>}</button><div className="min-w-0 flex-1"><p className="truncate text-sm font-bold">QS. {selected?.name} · Ayat {activeAyah}</p><p className="mt-0.5 text-xs font-semibold text-white/65">{isPlaying ? `${t('quran.nowPlaying')} · ${qari.name}` : `Siap diputar · ${qari.name}`}</p></div><div className="flex shrink-0 items-center gap-1"><button type="button" onClick={() => moveAyah(-1)} disabled={activeAyah === 1} aria-label="Ayat sebelumnya" className="player-control disabled:opacity-35"><SkipBack size={18}/></button><button type="button" onClick={() => { if (audioRef.current) { audioRef.current.currentTime = 0; audioRef.current.play().catch(() => setIsPlaying(false)) } }} aria-label="Ulangi audio aktif" className="player-control"><RotateCcw size={18}/></button><button type="button" onClick={() => moveAyah(1)} disabled={activeAyah === selected?.ayat} aria-label="Ayat berikutnya" className="player-control disabled:opacity-35"><SkipForward size={18}/></button></div></div></section>}
+      <header className="mb-5 flex items-center justify-between gap-3">
+        <div className="flex items-center gap-3 min-w-0">
+          <button type="button" onClick={back} aria-label={t('common.back')} className="icon-button shrink-0 shadow-sm transition-transform active:scale-95">
+            <ArrowLeft size={20}/>
+          </button>
+          <div className="min-w-0">
+            <p className="text-[11px] font-extrabold uppercase tracking-[0.18em] text-emerald-800 dark:text-emerald-400">Wali Tahfiz</p>
+            <h1 className="font-display text-2xl sm:text-3xl font-bold tracking-tight text-stone-900 dark:text-stone-100">{t('audio.title')}</h1>
+          </div>
+        </div>
+        <button type="button" onClick={() => setCatalogOpen((open) => !open)} className="page-action-button shrink-0 shadow-sm transition-transform active:scale-95">
+          <Search size={17}/>
+          <span>{catalogOpen ? t('common.close') : t('audio.search')}</span>
+        </button>
+      </header>
+
+      <section className="glass-card overflow-hidden shadow-lg border border-emerald-900/10 dark:border-emerald-700/20">
+        <div className="relative bg-gradient-to-br from-emerald-800 via-forest to-emerald-950 px-6 py-6 text-white overflow-hidden sm:px-7">
+          <div className="pointer-events-none absolute -right-8 -top-8 h-40 w-40 rounded-full bg-white/10 blur-2xl"/>
+          <div className="relative z-10 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="space-y-1.5 min-w-0">
+              <div className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1 text-xs font-semibold backdrop-blur-md text-white/90">
+                <Headphones size={13}/>
+                <span>{t('audio.eyebrow')}</span>
+              </div>
+              <div className="flex items-baseline gap-3">
+                <h2 className="font-display text-2xl sm:text-3xl font-bold tracking-wide text-white">{selected?.name || 'Juz 30'}</h2>
+                {selected?.arabic && <span className="font-arabic text-2xl text-emerald-200/90" dir="rtl">{selected.arabic}</span>}
+              </div>
+              <p className="text-xs sm:text-sm text-emerald-100/80 max-w-md leading-relaxed">{t('audio.body')}</p>
+            </div>
+
+            <div className="flex shrink-0 items-center sm:flex-col sm:items-end gap-2.5 pt-2 sm:pt-0 border-t border-white/10 sm:border-0">
+              <span className="rounded-full bg-emerald-950/40 px-3 py-1 text-[11px] font-bold uppercase tracking-wider text-emerald-200 border border-emerald-500/20 backdrop-blur-md">
+                {t('quran.perVerse')}
+              </span>
+              <button type="button" onClick={startOfflineDownload} disabled={isDownloading || isDownloaded} className="flex min-h-10 items-center gap-2 rounded-xl bg-white/20 px-3.5 text-xs font-bold text-white backdrop-blur-md transition-all hover:bg-white/30 active:scale-[0.96] disabled:cursor-not-allowed disabled:opacity-75 shadow-sm">
+                {isDownloading ? <>{t('audio.downloading', { done: downloadProgress, total: downloadTotal })}</> : isDownloaded ? <><Check size={14} className="text-emerald-300"/> {t('audio.downloaded')}</> : <><Download size={14}/> {t('audio.download')}</>}
+              </button>
+            </div>
+          </div>
+          {downloadError && <p role="alert" className="mt-3 text-xs font-semibold text-amber-200">{downloadError}</p>}
+        </div>
+      {catalogOpen && <div className="border-b border-sage/70 bg-surface-raised p-5 dark:bg-surface dark:border-emerald-900/50"><label className="relative block"><Search className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-forest" size={19}/><input autoFocus value={query} onChange={(event) => setQuery(event.target.value)} placeholder={t('audio.searchPlaceholder')} className="input-field pl-11" aria-label={t('audio.search')}/></label><p className="mt-3 text-sm text-stone-500 dark:text-stone-400">{query ? t('audio.surahFound', { count: filteredSurahs.length }) : t('audio.searchHint')}</p><div className="mt-3 grid gap-2 sm:grid-cols-2">{filteredSurahs.map((surah) => <button type="button" key={surah.id} onClick={() => selectSurah(surah)} className={`flex min-h-12 w-full items-center gap-3 rounded-2xl p-3 text-left transition-transform active:scale-[0.96] ${selectedId === surah.id ? 'bg-surface-muted dark:bg-emerald-950/60' : 'bg-white shadow-sm dark:bg-surface dark:shadow-none'}`}><span className="font-bold tabular-nums text-terracotta">{surah.id}</span><span className="min-w-0 flex-1"><b className="block text-forest">{surah.name}</b><small className="text-stone-500 dark:text-stone-400">{t('onboardingStep2.surahInfo', { count: surah.ayat, juz: '' })}</small></span><span className="font-serif text-lg text-terracotta" dir="rtl">{surah.arabic}</span></button>)}{query && filteredSurahs.length === 0 && <p className="rounded-2xl bg-surface-raised p-4 text-sm font-semibold text-stone-500 dark:text-stone-400 sm:col-span-2">{t('audio.surahNotFound')}</p>}</div></div>}
+      <div className="p-4 sm:p-5"><button type="button" onClick={() => setSettingsOpen((open) => !open)} aria-expanded={settingsOpen} className="range-settings-toggle"><span><SlidersHorizontal size={18}/><b>{t('audio.repeat')}</b></span><small>{qari.name}</small></button>{settingsOpen && <div className="range-settings-panel"><div><span className="mb-2 block text-sm font-bold text-forest">{t('audio.qari')}</span><QariPicker value={selectedQariId} onChange={selectQari}/></div><div className="mt-4 flex items-center justify-between gap-3 border-t border-sage/70 pt-4"><span><b className="block text-forest">{t('audio.repeat')}</b><small className="text-stone-500 dark:text-stone-400">{t('audio.repeatDescription')}</small></span><div className="flex gap-1.5">{[1, 2, 3, 5].map((count) => <button type="button" key={count} onClick={() => { resetProgress(); setAyahRepeatCount(count); saveQuranRepeat(count) }} aria-pressed={ayahRepeatCount === count} className={`range-choice ${ayahRepeatCount === count ? 'range-choice-active' : ''}`}>{count}×</button>)}</div></div><div className="mt-4 border-t border-sage/70 pt-4"><div className="flex items-center justify-between gap-3"><span><b className="block text-forest">{t('audio.rangePlay')}</b><small className="text-stone-500 dark:text-stone-400">{t('audio.rangeDescription')}</small></span><button type="button" onClick={() => setRangeEnabled((value) => !value)} aria-pressed={rangeEnabled} className={`range-switch ${rangeEnabled ? 'range-switch-active' : ''}`}>{rangeEnabled ? t('audio.active') : t('audio.inactive')}</button></div>{rangeEnabled && <div className="mt-4 grid gap-3 sm:grid-cols-[1fr_1fr_auto]"><Field label={t('audio.fromAyah')}><input type="number" min="1" max={selected?.ayat} value={rangeStart} onChange={(event) => setBound('start', event.target.value)} className="range-input"/></Field><Field label={t('audio.toAyah')}><input type="number" min={rangeStart} max={selected?.ayat} value={rangeEnd} onChange={(event) => setBound('end', event.target.value)} className="range-input"/></Field><Field label={t('audio.repeat')}><div className="flex h-[52px] gap-1">{[1, 2, 3, 5].map((count) => <button type="button" key={count} onClick={() => { resetProgress(); setRangeRepeatCount(count) }} aria-pressed={rangeRepeatCount === count} className={`range-choice flex-1 ${rangeRepeatCount === count ? 'range-choice-active' : ''}`}>{count}×</button>)}</div></Field></div>}</div><button type="button" onClick={startRange} className="primary-button mt-4"><Play size={19} fill="currentColor"/>{t('audio.start')}</button></div>}</div>
+      {error && <div className="mx-4 mb-4 rounded-2xl bg-surface-warning p-4 text-sm text-terracotta dark:bg-amber-950/40 dark:text-amber-200" role="alert">{error}</div>}
+      {isLoading ? <div className="m-4 flex min-h-72 items-center justify-center rounded-[26px] bg-surface-raised text-center dark:bg-emerald-950/60"><p className="text-sm font-semibold text-slate-500 dark:text-stone-300">{t('audio.loading')}</p></div> : <div className="m-4 space-y-3" aria-live="polite">{selectedId !== '1' && <button type="button" onClick={playBismillah} aria-pressed={isBismillah} className={`bismillah-card ${isBismillah ? 'bismillah-card-active' : ''}`}><span className="step-label bg-emerald-100 text-emerald-800 dark:border dark:border-emerald-700/50 dark:bg-emerald-900 dark:text-emerald-200"><Volume2 size={13}/> {t('audio.bismillahTitle')}</span><p className="mt-3 font-arabic text-2xl md:text-3xl leading-[2.3] text-forest dark:text-emerald-100" dir="rtl">{BISMILLAH_TEXT}</p><small>{t('audio.bismillahTranslation')}</small></button>}{verses.map((ayah) => { const isActive = activeAyah === ayah.number && !isBismillah; return <button type="button" id={`quran-ayah-${selectedId}-${ayah.number}`} key={ayah.number} onClick={() => playFromAyah(ayah.number)} disabled={!inRange(ayah.number)} aria-pressed={isActive} className={`ayah-card w-full text-left ${isActive ? 'ayah-card-active' : 'bg-white dark:bg-stone-900/80 border border-stone-200/80 dark:border-emerald-900/30 rounded-2xl p-5 shadow-sm'} ${rangeEnabled && inRange(ayah.number) ? 'ayah-card-in-range' : ''} disabled:cursor-default disabled:opacity-100`}><div className="flex justify-between items-start gap-4"><span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-sm tabular-nums ${isActive ? 'ayah-number-active' : 'bg-emerald-100 text-emerald-800 font-semibold border border-emerald-200 dark:bg-emerald-950 dark:text-emerald-300 dark:border-emerald-800/50'}`}>{ayah.number}</span><p className={`mb-4 text-right text-stone-900 dark:text-stone-100 font-arabic text-2xl md:text-3xl leading-[2.05] sm:leading-[2.15] md:leading-[2.2] pb-1 ${isActive ? 'text-emerald-700 dark:text-emerald-200 font-bold' : ''}`} dir="rtl">{ayah.arabic}</p></div><div className="pt-3 border-t border-stone-100 dark:border-emerald-950/40 text-stone-600 dark:text-stone-300 text-sm leading-relaxed">{ayah.translation}</div></button> })}</div>}
+      </section>{activeAyah && <section className="sticky bottom-4 z-20 mt-4 rounded-[26px] bg-forest p-3 text-white shadow-[0_18px_40px_rgba(71,119,92,.28)]"><div className="flex items-center gap-3"><button type="button" onClick={togglePlayback} aria-label={isPlaying ? t('review.pauseAudio') : t('review.playQuestion')} className="player-main-button">{isPlaying ? <Pause size={22} fill="currentColor"/> : <Play className="ml-0.5" size={22} fill="currentColor"/>}</button><div className="min-w-0 flex-1"><p className="truncate text-sm font-bold">QS. {selected?.name} · {t('common.ayah')} {activeAyah}</p><p className="mt-0.5 text-xs font-semibold text-white/65">{isPlaying ? `${t('quran.nowPlaying')} · ${qari.name}` : `${t('audio.ready')} · ${qari.name}`}</p></div><div className="flex shrink-0 items-center gap-1"><button type="button" onClick={() => moveAyah(-1)} disabled={activeAyah === 1} aria-label={t('audio.previous')} className="player-control disabled:opacity-35"><SkipBack size={18}/></button><button type="button" onClick={() => { if (audioRef.current) { audioRef.current.currentTime = 0; audioRef.current.play().catch(() => setIsPlaying(false)) } }} aria-label={t('audio.repeatActive')} className="player-control"><RotateCcw size={18}/></button><button type="button" onClick={() => moveAyah(1)} disabled={activeAyah === selected?.ayat} aria-label={t('audio.next')} className="player-control disabled:opacity-35"><SkipForward size={18}/></button></div></div></section>}
     </div>
   </main>
 }

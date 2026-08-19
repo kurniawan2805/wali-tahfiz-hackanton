@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "kind": "deck",
+  "title": "wali-tahfiz-pitch-deck.html",
+  "entry": "wali-tahfiz-pitch-deck.html",
+  "renderer": "deck-html",
+  "status": "complete",
+  "exports": [
+    "html",
+    "pdf",
+    "zip"
+  ],
+  "createdAt": "2026-08-06T13:43:18.913Z",
+  "updatedAt": "2026-08-06T14:51:14.792Z",
+  "metadata": {
+    "inferred": true,
+    "reconciled": true
+  }
+}

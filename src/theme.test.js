@@ -1,8 +1,8 @@
-import test from 'node:test'
-import assert from 'node:assert/strict'
-import { applyTheme, THEME_COLORS, THEME_STORAGE_KEY } from './theme.js'
+   import test from 'node:test'
+   import assert from 'node:assert/strict'
+   import { applyTheme, getInitialTheme, THEME_COLORS, THEME_STORAGE_KEY } from './theme.js'
 
-function createThemeTarget(initialClasses = []) {
+   function createThemeTarget(initialClasses = []) {
   const classes = new Set(initialClasses)
   const writes = new Map()
   return {
@@ -32,13 +32,26 @@ test('applyTheme adds dark class and persists dark mode', () => {
   assert.equal(target.writes.get(THEME_STORAGE_KEY), 'dark')
 })
 
-test('applyTheme removes stale dark classes and persists light mode', () => {
-  const target = createThemeTarget(['dark', 'body:dark'])
-  assert.equal(applyTheme('light', target), 'light')
-  assert.equal(target.classes.has('dark'), false)
-  assert.equal(target.classes.has('body:dark'), false)
-  assert.equal(target.root.dataset.theme, 'light')
-  assert.equal(target.root.style.colorScheme, 'light')
-  assert.equal(target.themeColor.content, THEME_COLORS.light)
-  assert.equal(target.writes.get(THEME_STORAGE_KEY), 'light')
-})
+   test('applyTheme removes stale dark classes and persists light mode', () => {
+     const target = createThemeTarget(['dark', 'body:dark'])
+     assert.equal(applyTheme('light', target), 'light')
+     assert.equal(target.classes.has('dark'), false)
+     assert.equal(target.classes.has('body:dark'), false)
+     assert.equal(target.root.dataset.theme, 'light')
+     assert.equal(target.root.style.colorScheme, 'light')
+     assert.equal(target.themeColor.content, THEME_COLORS.light)
+     assert.equal(target.writes.get(THEME_STORAGE_KEY), 'light')
+   })
+
+   test('getInitialTheme falls back to prefers-color-scheme when unconfigured', () => {
+     const emptyStorage = { getItem: () => null }
+     assert.equal(getInitialTheme({ storage: emptyStorage, mediaQuery: { matches: true } }), 'dark')
+     assert.equal(getInitialTheme({ storage: emptyStorage, mediaQuery: { matches: false } }), 'light')
+   })
+
+   test('getInitialTheme respects saved preference over system preference', () => {
+     const darkStorage = { getItem: () => 'dark' }
+     const lightStorage = { getItem: () => 'light' }
+     assert.equal(getInitialTheme({ storage: darkStorage, mediaQuery: { matches: false } }), 'dark')
+     assert.equal(getInitialTheme({ storage: lightStorage, mediaQuery: { matches: true } }), 'light')
+   })

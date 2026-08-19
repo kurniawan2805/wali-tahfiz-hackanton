@@ -38,9 +38,9 @@ const savedRange = (memory) => ({ surahId: String(memory.surahId), startAyah: Nu
 
 export default async function handler(request, response) {
   if (request.method !== 'POST') return response.status(405).json({ error: 'Method not allowed' })
-  if (!process.env.OPENAI_API_KEY) return response.status(503).json({ error: 'AI belum dikonfigurasi.' })
   const body = request.body || {}
   const locale = body.locale === 'en' ? 'en' : 'id'
+  if (!process.env.OPENAI_API_KEY) return response.status(503).json({ error: locale === 'en' ? 'AI is not configured.' : 'AI belum dikonfigurasi.' })
   const catalogue = Array.isArray(body.catalogue) && body.catalogue.length ? body.catalogue.slice(0, 50) : QURAN_CATALOGUE
   const input = {
     locale, today: String(body.today || '').slice(0, 10),
@@ -49,14 +49,14 @@ export default async function handler(request, response) {
     supportedQuran: catalogue,
     savedMemorisedRanges: Array.isArray(body.memories) ? body.memories.slice(0, 100).map(savedRange) : [],
   }
-  if (!input.guardianText) return response.status(400).json({ error: 'Progress text is required.' })
+  if (!input.guardianText) return response.status(400).json({ error: locale === 'en' ? 'Progress text is required.' : 'Teks progress harus diisi.' })
   try {
     const openaiResponse = await fetch('https://api.openai.com/v1/responses', {
       method: 'POST', headers: { Authorization: `Bearer ${process.env.OPENAI_API_KEY}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ model: process.env.OPENAI_MODEL || 'gpt-4.1-nano', store: false,
+      body: JSON.stringify({ model: process.env.OPENAI_MODEL || 'gpt-5.6-luna', store: false,
         instructions: locale === 'en'
-          ? 'Interpret the guardian text as completed new memorisation or completed murojaah only. Return exact surah IDs and ayah ranges from the supplied catalogue. Never infer unsupported actions, partial attempts, notes, or unknown ranges. Put uncertain or unrecognised phrases in unrecognised and explain what the guardian should clarify in clarification. Do not mention that you are AI.'
-          : 'Tafsirkan teks wali hanya sebagai hafalan baru yang selesai atau murojaah yang selesai. Kembalikan ID surat dan rentang ayat yang tepat dari katalog. Jangan mengarang tindakan lain, percobaan sebagian, catatan, atau rentang yang tidak jelas. Masukkan frasa yang tidak dikenali ke unrecognised dan jelaskan yang perlu diklarifikasi di clarification. Jangan menyebut bahwa Anda adalah AI.',
+          ? 'Interpret the guardian text as a list of completed memorisation activities: new memorisation or murojaah. The text may contain more than one activity separated by "and" or commas; return one entry for each completed activity and never omit any. Return exact surah IDs and ayah ranges from the supplied catalogue. Never infer unsupported actions, partial attempts, notes, or unknown ranges. Put uncertain or unrecognised phrases in unrecognised and explain what the guardian should clarify in clarification. Do not mention that you are AI.'
+          : 'Tafsirkan teks wali sebagai daftar kegiatan hafalan yang selesai: hafalan baru atau murojaah. Teks dapat memuat lebih dari satu kegiatan yang dipisahkan kata "dan" atau koma; kembalikan satu entri untuk setiap kegiatan dan jangan menghilangkan kegiatan mana pun. Kembalikan ID surat dan rentang ayat yang tepat dari katalog. Jangan mengarang tindakan lain, percobaan sebagian, catatan, atau rentang yang tidak jelas. Masukkan frasa yang tidak dikenali ke unrecognised dan jelaskan yang perlu diklarifikasi di clarification. Jangan menyebut bahwa Anda adalah AI.',
         input: JSON.stringify(input), text: { format: { type: 'json_schema', name: 'logged_progress', strict: true, schema } },
       }),
     })
@@ -65,6 +65,6 @@ export default async function handler(request, response) {
     return response.status(200).json(validateModelProgress(JSON.parse(extractOutputText(payload)), catalogue, input.savedMemorisedRanges))
   } catch (error) {
     console.error('[log-progress] request failed:', error instanceof Error ? error.message : error)
-    return response.status(502).json({ error: 'Progress belum dapat dipahami. Coba jelaskan surat dan rentang ayatnya.' })
+    return response.status(502).json({ error: locale === 'en' ? 'Could not understand progress. Try explaining the surah and ayah range.' : 'Progress belum dapat dipahami. Coba jelaskan surat dan rentang ayatnya.' })
   }
 }

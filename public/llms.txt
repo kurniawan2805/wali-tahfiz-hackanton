@@ -1,0 +1,18 @@
+# Wali Tahfiz Corner
+
+> Pendamping hafalan dan muraja'ah Al-Qur'an Juz 30 untuk keluarga.
+
+Wali Tahfiz Corner adalah aplikasi web progressive (PWA) offline-first yang membantu orang tua dan anak dalam menambah hafalan baru (talaqqi, tikrar, rabt) serta memelihara hafalan Al-Qur'an Juz 30 (muraja'ah) secara terstruktur.
+
+## Aplikasi & Fitur Utama
+
+- [Dashboard Wali Tahfiz](https://wali-tahfiz.vercel.app/): Halaman utama, agenda target harian anak, rekomendasi muraja'ah, dan Asisten AI Tahfiz.
+- [Murottal Juz 30 Offline](https://wali-tahfiz.vercel.app/?shortcut=murottal): Mode dengar murottal per ayat offline dengan pilihan qari Syaikh Ayman Sowaid.
+- [Muraja'ah Uji Hafalan](https://wali-tahfiz.vercel.app/?shortcut=murajaah): Mode tes sambung ayat harian berbasis Spaced Repetition.
+- [Dokumentasi PWA & Offline](https://wali-tahfiz.vercel.app/manifest.webmanifest): Manifest PWA dan konfigurasi offline app shell.
+- [Daftar Sitemaps](https://wali-tahfiz.vercel.app/sitemap.xml): Indeks peta situs untuk mesin pencari dan AI web crawlers.
+
+## Optional & Resources
+
+- [Al-Quran Cloud Uthmani API](https://api.alquran.cloud/v1/surah/1/quran-uthmani): Sumber teks Al-Qur'an Uthmani.
+- [Islamic Network Audio CDN](https://cdn.islamic.network): Sumber audio murottal per ayat offline cache.
