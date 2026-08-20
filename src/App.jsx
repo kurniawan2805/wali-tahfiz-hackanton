@@ -407,6 +407,7 @@ const sortLearningQueue = (first, second) => {
 
 function localCoachAdvice({ profile, targets, memories, conditions, listenRepeats, checkin }, t) {
   const todayTargets = targets.filter((target) => isCreatedToday(target.createdAt, todayKey()))
+  const reviewTargets = todayTargets.filter((target) => target.type === 'review')
   const done = todayTargets.filter((target) => target.status === 'done').length
   const activeCount = todayTargets.length - done
   const isExtra = (target) => {
